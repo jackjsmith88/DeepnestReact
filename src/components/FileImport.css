@@ -1,0 +1,14 @@
+/* FileImport specific styles */
+.button.import {
+  background: #28a745;
+}
+
+.button.import:hover:not(:disabled) {
+  background: #218838;
+}
+
+.button.import:disabled {
+  background: #3a3a3a;
+  color: #666;
+  cursor: not-allowed;
+}
