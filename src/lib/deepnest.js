@@ -1023,8 +1023,9 @@ if (typeof window !== 'undefined') {
 		var self = this;
 		this.working = true;
 		
-		// Store callbacks for background processing
-		this._backgroundCallback = null;
+		// Store callbacks in outer scope
+		progressCallback = progressCallback || this.progressCallback;
+		displayCallback = displayCallback || this.displayCallback;
 		
 		if(!workerTimer){
 			workerTimer = setInterval(function(){
@@ -1034,9 +1035,10 @@ if (typeof window !== 'undefined') {
 		}
 	}
 	
-	// Handle background response - called instead of IPC
+	// Handle background response - called from Web Worker
 	this.handleBackgroundResponse = function(payload) {
 		console.log('background response', payload);
+		console.log('displayCallback exists?', typeof displayCallback, displayCallback);
 		if(!GA){
 			// user might have quit while we're away
 			return;
@@ -1051,8 +1053,10 @@ if (typeof window !== 'undefined') {
 			if(this.nests.length > 10){
 				this.nests.pop();
 			}
-			if(displayCallback){
-				displayCallback();
+			// Only call displayCallback if it exists and is a function
+			console.log('About to call displayCallback with nests:', this.nests);
+			if(displayCallback && typeof displayCallback === 'function'){
+				displayCallback(this.nests);
 			}
 		}
 	};
@@ -1169,14 +1173,73 @@ if (typeof window !== 'undefined') {
 				children[j] = child;
 			}
 			
-			// TODO: For web version, this will use Web Workers instead of Electron IPC
-			// For now, we'll need to implement a callback-based approach
-			// ipcRenderer.send('background-start', {index: i, sheets: sheets, sheetids: sheetids, sheetsources: sheetsources, sheetchildren: sheetchildren, individual: GA.population[i], config: config, ids: ids, sources: sources, children: children});
-			
-			// Placeholder for web worker implementation
-			console.warn('Background worker not yet implemented for web version');
-			
-			running++;					
+			// Use Web Worker instead of Electron IPC
+			if (typeof Worker !== 'undefined') {
+				try {
+					const worker = new Worker('/nesting-worker.js');
+					
+					worker.onmessage = (event) => {
+						const { type, payload, error } = event.data;
+						
+						if (type === 'background-response') {
+							self.handleBackgroundResponse(payload);
+							running--;
+						} else if (type === 'error') {
+							console.error('Worker error:', error);
+							if (GA && GA.population && GA.population[i]) {
+								GA.population[i].processing = false;
+							}
+							running--;
+						} else if (type === 'ready') {
+							console.log('Worker ready');
+						}
+						
+						// Don't terminate immediately - let it finish
+						if (type !== 'ready') {
+							worker.terminate();
+						}
+					};
+					
+					worker.onerror = (error) => {
+						console.error('Worker error:', error);
+						if (GA && GA.population && GA.population[i]) {
+							GA.population[i].processing = false;
+						}
+						worker.terminate();
+						running--;
+					};
+					
+					// Send data to worker
+					worker.postMessage({
+						type: 'background-start',
+						data: {
+							index: i,
+							sheets: sheets,
+							sheetids: sheetids,
+							sheetsources: sheetsources,
+							sheetchildren: sheetchildren,
+							individual: GA.population[i],
+							config: config,
+							ids: ids,
+							sources: sources,
+							children: children
+						}
+					});
+					
+					running++;
+				} catch (err) {
+					console.warn('Web Worker error:', err);
+					// Fallback - mark as failed
+					if (GA && GA.population && GA.population[i]) {
+						GA.population[i].processing = false;
+					}
+				}
+			} else {
+				console.warn('Web Workers not supported in this browser');
+				if (GA && GA.population && GA.population[i]) {
+					GA.population[i].processing = false;
+				}
+			}
 		}
 	}
 }		// use the clipper library to return an offset to the given polygon. Positive offset expands the polygon, negative contracts

@@ -20,6 +20,7 @@ export function useDeepnest() {
   });
   const [isNesting, setIsNesting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [nests, setNests] = useState([]);
   
   const deepnestRef = useRef(null);
 
@@ -69,20 +70,22 @@ export function useDeepnest() {
   const startNest = useCallback(() => {
     setIsNesting(true);
     setProgress(0);
+    setNests([]);
     
     const progressCallback = (prog) => {
       setProgress(prog);
     };
     
-    const displayCallback = () => {
+    const displayCallback = (nestsArray) => {
       // Update display when new results are available
-      console.log('New nesting result available');
+      console.log('New nesting result available', nestsArray);
+      if (nestsArray && nestsArray.length > 0) {
+        setNests([...nestsArray]);
+      }
     };
     
     try {
       deepnestRef.current.start(
-        deepnestRef.current.parts,
-        config,
         progressCallback,
         displayCallback
       );
@@ -112,6 +115,7 @@ export function useDeepnest() {
     config,
     isNesting,
     progress,
+    nests,
     importSVG,
     deletePart,
     updatePartQuantity,
