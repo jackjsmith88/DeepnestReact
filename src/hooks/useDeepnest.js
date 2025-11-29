@@ -78,9 +78,12 @@ export function useDeepnest() {
     
     const displayCallback = (nestsArray) => {
       // Update display when new results are available
-      console.log('New nesting result available', nestsArray);
+      console.log('[useDeepnest] displayCallback received', nestsArray?.length, 'nests');
       if (nestsArray && nestsArray.length > 0) {
-        setNests([...nestsArray]);
+        // Deep clone to ensure React detects the change
+        const clonedNests = JSON.parse(JSON.stringify(nestsArray));
+        console.log('[useDeepnest] Setting nests state with', clonedNests.length, 'items');
+        setNests(clonedNests);
       }
     };
     

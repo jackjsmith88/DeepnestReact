@@ -1037,8 +1037,7 @@ if (typeof window !== 'undefined') {
 	
 	// Handle background response - called from Web Worker
 	this.handleBackgroundResponse = function(payload) {
-		console.log('background response', payload);
-		console.log('displayCallback exists?', typeof displayCallback, displayCallback);
+		console.log(`[DeepNest] Response index=${payload.index}, fitness=${payload.fitness?.toFixed(0)}`);
 		if(!GA){
 			// user might have quit while we're away
 			return;
@@ -1046,7 +1045,7 @@ if (typeof window !== 'undefined') {
 		GA.population[payload.index].processing = false;
 		GA.population[payload.index].fitness = payload.fitness;
 		
-		// render placement
+		// render placement - only update if this is better than current best
 		if(this.nests.length == 0 || this.nests[0].fitness > payload.fitness ){
 			this.nests.unshift(payload);
 			
@@ -1054,7 +1053,7 @@ if (typeof window !== 'undefined') {
 				this.nests.pop();
 			}
 			// Only call displayCallback if it exists and is a function
-			console.log('About to call displayCallback with nests:', this.nests);
+			console.log(`[DeepNest] New best! Calling displayCallback with ${this.nests.length} nests`);
 			if(displayCallback && typeof displayCallback === 'function'){
 				displayCallback(this.nests);
 			}
@@ -1191,7 +1190,7 @@ if (typeof window !== 'undefined') {
 							}
 							running--;
 						} else if (type === 'ready') {
-							console.log('Worker ready');
+							// Worker ready - no need to log
 						}
 						
 						// Don't terminate immediately - let it finish

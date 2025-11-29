@@ -7,9 +7,75 @@ import { useEffect, useRef, useState } from 'react';
 export default function NestViewer({ nests, parts, onSelectNest }) {
   const svgRef = useRef(null);
   const [selectedNest, setSelectedNest] = useState(0);
+  const [copied, setCopied] = useState(false);
+  
+  // Generate debug report
+  const generateDebugReport = () => {
+    if (!nests || nests.length === 0 || !parts) return '';
+    
+    const nest = nests[selectedNest];
+    if (!nest) return '';
+    
+    const sheetPart = parts.find(p => p.sheet);
+    const sheetBounds = sheetPart?.bounds;
+    
+    let report = `=== DEEPNEST DEBUG REPORT ===\n`;
+    report += `Generated: ${new Date().toISOString()}\n\n`;
+    
+    report += `--- SHEET INFO ---\n`;
+    report += `Sheet bounds: (${sheetBounds?.x?.toFixed(0)}, ${sheetBounds?.y?.toFixed(0)}) ${sheetBounds?.width?.toFixed(0)}x${sheetBounds?.height?.toFixed(0)}\n\n`;
+    
+    report += `--- NEST INFO ---\n`;
+    report += `Selected Nest: ${selectedNest + 1}\n`;
+    report += `Fitness: ${nest.fitness?.toFixed(2)}\n`;
+    report += `Placements: ${nest.placements?.length || 0} sheets\n\n`;
+    
+    report += `--- PARTS INFO ---\n`;
+    parts.forEach((part, idx) => {
+      report += `Part ${idx}: sheet=${part.sheet}, bounds=(${part.bounds?.x?.toFixed(0)}, ${part.bounds?.y?.toFixed(0)}) ${part.bounds?.width?.toFixed(0)}x${part.bounds?.height?.toFixed(0)}\n`;
+    });
+    report += `\n`;
+    
+    report += `--- PLACEMENT DETAILS ---\n`;
+    if (nest.placements) {
+      nest.placements.forEach((sheetPlacement, sIdx) => {
+        report += `Sheet ${sIdx}:\n`;
+        if (sheetPlacement.sheetplacements) {
+          sheetPlacement.sheetplacements.forEach((p, pIdx) => {
+            const part = parts[p.source];
+            report += `  Part ${pIdx}: source=${p.source}, translate=(${p.x?.toFixed(0)}, ${p.y?.toFixed(0)}), rotation=${p.rotation || 0}\n`;
+            report += `    Part bounds: (${part?.bounds?.x?.toFixed(0)}, ${part?.bounds?.y?.toFixed(0)}) ${part?.bounds?.width?.toFixed(0)}x${part?.bounds?.height?.toFixed(0)}\n`;
+            if (sheetBounds) {
+              const finalX = p.x - sheetBounds.x;
+              const finalY = p.y - sheetBounds.y;
+              report += `    Final transform: translate(${finalX.toFixed(0)}, ${finalY.toFixed(0)})\n`;
+              const expectedX = part?.bounds?.x + finalX;
+              const expectedY = part?.bounds?.y + finalY;
+              report += `    Expected position: (${expectedX?.toFixed(0)}, ${expectedY?.toFixed(0)})\n`;
+            }
+          });
+        }
+      });
+    }
+    
+    return report;
+  };
+  
+  const copyDebugReport = async () => {
+    const report = generateDebugReport();
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
   
   useEffect(() => {
+    console.log('[NestViewer] useEffect triggered - nests:', nests?.length, 'selectedNest:', selectedNest);
     if (nests && nests.length > 0 && parts) {
+      console.log('[NestViewer] Calling renderNest for nest', selectedNest);
       renderNest(nests[selectedNest]);
     }
   }, [nests, selectedNest, parts]);
@@ -17,8 +83,7 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
   const renderNest = (nest) => {
     if (!nest || !nest.placements) return;
     
-    console.log('renderNest called with:', nest);
-    console.log('placements:', nest.placements);
+    console.log('[NestViewer] renderNest called - fitness:', nest.fitness?.toFixed(0), 'placements:', nest.placements?.length);
     
     const svg = svgRef.current;
     if (!svg) return;
@@ -26,152 +91,169 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
     // Clear previous content
     svg.innerHTML = '';
     
-    let svgWidth = 0;
-    let svgHeight = 0;
-    let minX = 0;
-    let minY = 0;
-    let maxX = 0;
-    let maxY = 0;
-    
     // Create defs for patterns
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     svg.appendChild(defs);
     
+    // Find the sheet (first part marked as sheet)
+    const sheetIndex = parts.findIndex(p => p.sheet);
+    const sheetPart = sheetIndex >= 0 ? parts[sheetIndex] : null;
+    
+    if (!sheetPart) {
+      console.warn('No sheet found in parts');
+      return;
+    }
+    
+    const sheetBounds = sheetPart.bounds;
+    console.log('[NestViewer] Sheet:', sheetIndex, 'bounds:', sheetBounds.width.toFixed(0), 'x', sheetBounds.height.toFixed(0));
+    
+    // The sheet's original position in the SVG
+    const sheetOriginX = sheetBounds.x;
+    const sheetOriginY = sheetBounds.y;
+    
+    // ViewBox: we want to see the sheet area (normalized to 0,0) plus padding
+    const padding = 50;
+    const viewBoxX = -padding;
+    const viewBoxY = -padding;
+    const viewBoxWidth = sheetBounds.width + padding * 2;
+    const viewBoxHeight = sheetBounds.height + padding * 2;
+    
+    svg.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`);
+    
     // Render each sheet placement
-    nest.placements.forEach((sheetPlacement, sheetIndex) => {
-      const sheetPart = parts[sheetPlacement.sheet];
-      if (!sheetPart) return;
+    nest.placements.forEach((sheetPlacement, idx) => {
+      // Get the sheet part using the sheet index from placement
+      const sheetPartIdx = sheetPlacement.sheet !== undefined ? sheetPlacement.sheet : sheetIndex;
+      const currentSheet = parts[sheetPartIdx] || sheetPart;
+      const currentSheetBounds = currentSheet.bounds;
       
-      // Create group for this sheet
+
+      
+      // Create group for this sheet - this group transforms everything to normalized coordinates
       const sheetGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       sheetGroup.setAttribute('id', `sheet${sheetPlacement.sheetid}`);
-      sheetGroup.setAttribute('class', 'sheet active');
-      
-      const sheetBounds = sheetPart.bounds;
-      sheetGroup.setAttribute('transform', `translate(${-sheetBounds.x} ${svgHeight - sheetBounds.y})`);
-      
-      console.log('Sheet bounds:', sheetBounds);
-      console.log('Sheet transform:', `translate(${-sheetBounds.x} ${svgHeight - sheetBounds.y})`);
-      
-      // Track bounds for viewBox calculation
-      minX = Math.min(minX, -sheetBounds.x);
-      minY = Math.min(minY, svgHeight - sheetBounds.y);
-      
-      if (svgWidth < sheetBounds.width) {
-        svgWidth = sheetBounds.width;
-      }
-      
-      maxX = Math.max(maxX, -sheetBounds.x + sheetBounds.width);
-      maxY = Math.max(maxY, svgHeight - sheetBounds.y + sheetBounds.height);
+      sheetGroup.setAttribute('class', 'sheet');
       
       // Draw sheet outline
-      if (sheetPart.svgelements) {
-        sheetPart.svgelements.forEach(element => {
+      // The sheet elements have original coordinates, so we translate them to start at 0,0
+      if (currentSheet.svgelements) {
+        currentSheet.svgelements.forEach(element => {
           const node = element.cloneNode(true);
-          node.setAttribute('stroke', '#cccccc');
-          node.setAttribute('fill', 'none');
-          node.setAttribute('stroke-width', '2');
+          node.setAttribute('transform', `translate(${-sheetOriginX} ${-sheetOriginY})`);
+          node.setAttribute('stroke', '#4a9eff');
+          node.setAttribute('fill', 'rgba(74, 158, 255, 0.05)');
+          node.setAttribute('stroke-width', '3');
           sheetGroup.appendChild(node);
         });
       }
       
       // Draw parts on this sheet
       if (sheetPlacement.sheetplacements) {
-        console.log('Drawing parts:', sheetPlacement.sheetplacements.length);
-        sheetPlacement.sheetplacements.forEach(partPlacement => {
-          const part = parts[partPlacement.source];
-          console.log('Part placement:', partPlacement, 'Part data:', part);
-          if (!part) return;
+        console.log('[NestViewer] Drawing', sheetPlacement.sheetplacements.length, 'parts on sheet', sheetPartIdx);
+        
+        // Build a map of non-sheet parts for source lookup
+        const nonSheetParts = parts.filter(p => !p.sheet);
+        
+        sheetPlacement.sheetplacements.forEach((partPlacement, pIdx) => {
+          // source is the index in the original parts array (including sheets)
+          const sourceIndex = partPlacement.source;
+          const part = parts[sourceIndex];
+          
+          console.log(`[NestViewer] Part ${pIdx}: source=${sourceIndex}, placement=(${partPlacement.x?.toFixed(0)}, ${partPlacement.y?.toFixed(0)})`);
+          
+          if (!part) {
+            console.warn('Part not found for source:', sourceIndex);
+            return;
+          }
+          
+          // Skip sheets
+          if (part.sheet) return;
+          
+          const partBounds = part.bounds;
 
-          // Create pattern for this part if not exists
-          const patternId = `part${partPlacement.source}hatch`;
+          
+          // Create unique color for this part
+          const hue = (360 * pIdx / Math.max(sheetPlacement.sheetplacements.length, 1)) % 360;
+          
+          // Create pattern
+          const patternId = `part${partPlacement.id}hatch`;
           if (!defs.querySelector(`#${patternId}`)) {
             const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
             pattern.setAttribute('id', patternId);
             pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-            
-            const psize = Math.max(10, parseInt(sheetBounds.width / 120));
+            const psize = 8;
             pattern.setAttribute('width', psize);
             pattern.setAttribute('height', psize);
             
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', `M-1,1 l2,-2 M0,${psize} l${psize},-${psize} M${psize-1},${psize+1} l2,-2`);
-            const hue = 360 * (partPlacement.source / parts.length);
-            path.setAttribute('stroke', `hsl(${hue}, 100%, 60%)`);
+            path.setAttribute('d', `M0,0 L${psize},${psize} M-1,${psize-1} L1,${psize+1} M${psize-1},-1 L${psize+1},1`);
+            path.setAttribute('stroke', `hsl(${hue}, 80%, 60%)`);
             path.setAttribute('stroke-width', '1');
             pattern.appendChild(path);
-            
             defs.appendChild(pattern);
           }
           
-          // Create group for this part
+          // Create part group
           const partGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           partGroup.setAttribute('id', `part${partPlacement.id}`);
-          partGroup.setAttribute('class', 'part active');
+          partGroup.setAttribute('class', 'part');
           
-          // Apply rotation and translation
-          const rotation = partPlacement.rotation || 0;
-          const x = partPlacement.x || 0;
-          const y = partPlacement.y || 0;
+          // The placement x,y are the translation from original position to target position
+          // The original position is partBounds.x, partBounds.y
+          // After applying translation (x, y), the part moves to: original + translation
+          // We also need to normalize to the sheet's coordinate system (subtract sheetOrigin)
           
-          // The placement x,y are the target position for the part
-          // We need to translate the part from its original position to the target
-          partGroup.setAttribute('transform', 
-            `translate(${x} ${y}) rotate(${rotation * (180/Math.PI)})`
-          );
+          // Final transform combines:
+          // 1. The worker's translation (partPlacement.x, y) which moves from original to target
+          // 2. Normalization to put the sheet at 0,0 (subtract sheetOrigin)
+          const finalX = partPlacement.x - sheetOriginX;
+          const finalY = partPlacement.y - sheetOriginY;
           
-          console.log('Part', partPlacement.id, 'transform:', `translate(${x} ${y})`);
+          console.log(`[NestViewer] Part ${pIdx} transform: translate=(${partPlacement.x?.toFixed(0)}, ${partPlacement.y?.toFixed(0)}), sheetOrigin=(${sheetOriginX.toFixed(0)}, ${sheetOriginY.toFixed(0)}), final=(${finalX.toFixed(0)}, ${finalY.toFixed(0)})`);
+          console.log(`[NestViewer] Part ${pIdx} bounds: (${part?.bounds?.x?.toFixed(0)}, ${part?.bounds?.y?.toFixed(0)}) ${part?.bounds?.width?.toFixed(0)}x${part?.bounds?.height?.toFixed(0)}`);
           
-          // Track bounds for viewBox - part position plus its bounds
-          const partBounds = part.bounds;
-          const partMinX = x + partBounds.x;
-          const partMinY = y + partBounds.y;
-          const partMaxX = partMinX + partBounds.width;
-          const partMaxY = partMinY + partBounds.height;
+          // Rotation is in degrees from the worker
+          // The worker rotates the polygon around its center before computing placement.
+          // We apply the same rotation in the viewer around the part's center.
+          const rotationDeg = partPlacement.rotation || 0;
           
-          minX = Math.min(minX, partMinX);
-          minY = Math.min(minY, partMinY);
-          maxX = Math.max(maxX, partMaxX);
-          maxY = Math.max(maxY, partMaxY);          // Draw part elements
+          // The part's center in original coordinates (for rotation pivot)
+          const partCenterX = partBounds.x + partBounds.width / 2;
+          const partCenterY = partBounds.y + partBounds.height / 2;
+          
+          // Apply transform: first rotate around part center, then translate
+          // SVG transforms apply right-to-left, so this order is correct
+          if (rotationDeg !== 0) {
+            partGroup.setAttribute('transform', `translate(${finalX} ${finalY}) rotate(${rotationDeg} ${partCenterX} ${partCenterY})`);
+          } else {
+            partGroup.setAttribute('transform', `translate(${finalX} ${finalY})`);
+          }
+          
+
+          
+          // Draw part elements
           if (part.svgelements) {
-            console.log('Drawing', part.svgelements.length, 'SVG elements for part', partPlacement.id);
-            part.svgelements.forEach((element, index) => {
+            part.svgelements.forEach((element, elIdx) => {
               const node = element.cloneNode(true);
-              console.log('Element', index, ':', element.tagName, element);
-              if (index === 0) {
-                node.setAttribute('fill', `url(#${patternId})`);
-                node.setAttribute('fill-opacity', '0.7');
-              } else {
-                node.setAttribute('fill', '#404247');
-              }
-              node.setAttribute('stroke', '#ff0000'); // Bright red for debugging
-              node.setAttribute('stroke-width', '3');
-              node.removeAttribute('style'); // Remove any style that might hide it
+              
+              // Style the element
+              node.setAttribute('fill', `hsl(${hue}, 50%, 65%)`);
+              node.setAttribute('fill-opacity', '0.8');
+              node.setAttribute('stroke', `hsl(${hue}, 70%, 35%)`);
+              node.setAttribute('stroke-width', '2');
+              
               partGroup.appendChild(node);
             });
           }
           
-          console.log('Appending part group to sheet:', partGroup);
           sheetGroup.appendChild(partGroup);
         });
       }
       
       svg.appendChild(sheetGroup);
-      svgHeight += 1.1 * sheetBounds.height;
     });
     
-    // Set SVG dimensions including negative coordinates
-    const finalWidth = maxX - minX;
-    const finalHeight = maxY - minY;
-    
-    svg.setAttribute('width', finalWidth);
-    svg.setAttribute('height', finalHeight);
-    svg.setAttribute('viewBox', `${minX} ${minY} ${finalWidth} ${finalHeight}`);
-    
-    console.log('SVG dimensions:', finalWidth, 'x', finalHeight);
-    console.log('SVG viewBox:', `${minX} ${minY} ${finalWidth} ${finalHeight}`);
-    console.log('Min/Max:', { minX, minY, maxX, maxY });
-    console.log('Final SVG:', svg.outerHTML.substring(0, 500));
+    console.log('[NestViewer] Render complete - viewBox:', svg.getAttribute('viewBox'));
   };
   
   const handleNestSelection = (index) => {
@@ -190,15 +272,16 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
   }
   
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#1a1a1a' }}>
       {/* Nest selection tabs */}
       {nests.length > 1 && (
         <div style={{ 
           display: 'flex', 
           gap: '5px', 
           padding: '10px',
-          borderBottom: '1px solid #ddd',
-          overflowX: 'auto'
+          borderBottom: '1px solid #3a3a3a',
+          overflowX: 'auto',
+          background: '#2a2a2a'
         }}>
           {nests.map((nest, index) => (
             <button
@@ -206,10 +289,10 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
               onClick={() => handleNestSelection(index)}
               style={{
                 padding: '8px 16px',
-                border: '1px solid #ddd',
+                border: '1px solid #3a3a3a',
                 borderRadius: '4px',
-                background: selectedNest === index ? '#007acc' : '#fff',
-                color: selectedNest === index ? '#fff' : '#000',
+                background: selectedNest === index ? '#646cff' : '#333',
+                color: '#fff',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap'
               }}
@@ -223,16 +306,34 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
       {/* Nest info */}
       <div style={{ 
         padding: '10px', 
-        background: '#f5f5f5',
-        borderBottom: '1px solid #ddd'
+        background: '#2a2a2a',
+        borderBottom: '1px solid #3a3a3a',
+        color: '#ccc',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
         <div style={{ fontSize: '14px' }}>
-          <strong>Best Fitness:</strong> {nests[selectedNest]?.fitness?.toFixed(2) || 'N/A'}
+          <strong style={{ color: '#fff' }}>Best Fitness:</strong> {nests[selectedNest]?.fitness?.toFixed(2) || 'N/A'}
           {' | '}
-          <strong>Sheets Used:</strong> {nests[selectedNest]?.sheets || 1}
+          <strong style={{ color: '#fff' }}>Sheets Used:</strong> {nests[selectedNest]?.sheets || 1}
           {' | '}
-          <strong>Parts Placed:</strong> {nests[selectedNest]?.placements?.[0]?.sheetplacements?.length || 0}
+          <strong style={{ color: '#fff' }}>Parts Placed:</strong> {nests[selectedNest]?.placements?.[0]?.sheetplacements?.length || 0}
         </div>
+        <button
+          onClick={copyDebugReport}
+          style={{
+            padding: '6px 12px',
+            background: copied ? '#28a745' : '#555',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px'
+          }}
+        >
+          {copied ? '✓ Copied!' : '📋 Copy Debug Report'}
+        </button>
       </div>
       
       {/* SVG display */}
@@ -240,15 +341,18 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
         flex: 1, 
         overflow: 'auto',
         padding: '20px',
-        background: '#ffffff'
+        background: '#1a1a1a'
       }}>
         <svg
           ref={svgRef}
           style={{
             width: '100%',
             height: 'auto',
+            maxHeight: '100%',
             display: 'block',
-            border: '1px solid #ddd'
+            background: '#0a0a0a',
+            border: '1px solid #3a3a3a',
+            borderRadius: '8px'
           }}
         />
       </div>
