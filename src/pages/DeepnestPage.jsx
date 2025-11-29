@@ -221,7 +221,7 @@ export default function DeepnestPage() {
         {/* Nesting Results View */}
         {viewMode === 'nesting' && (
           <div style={{ height: '100%', overflow: 'hidden' }}>
-            <NestViewer nests={nests} parts={parts} />
+            <NestViewer nests={nests} parts={parts} config={config} />
           </div>
         )}
       </div>
