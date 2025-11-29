@@ -4,6 +4,7 @@ import './App.css'
 import HomeBar from './components/Core/HomeBar'
 import Sidebar from './components/Core/Sidebar'
 import DeepnestPage from './pages/DeepnestPage'
+import SVGGeneratorParent from './pages/SVGGenerator/SVGGeneratorParent'
 import ConfigPage from './pages/ConfigPage'
 import InfoPage from './pages/InfoPage'
 
@@ -30,6 +31,7 @@ function App() {
         <main className={`main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
           <Routes>
             <Route path="/" element={<DeepnestPage />} />
+            <Route path="/svg-generator" element={<SVGGeneratorParent />} />
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/info" element={<InfoPage />} />
           </Routes>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Settings, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Settings, Info, ChevronLeft, ChevronRight, Shapes } from 'lucide-react';
 import './Sidebar.css';
 
 const menuItems = [
@@ -9,6 +9,12 @@ const menuItems = [
     label: 'Nesting',
     icon: Home,
     path: '/'
+  },
+  {
+    id: 'svg-generator',
+    label: 'SVG Generator',
+    icon: Shapes,
+    path: '/svg-generator'
   },
   {
     id: 'config',
