@@ -1,0 +1,137 @@
+.sidebar {
+  width: 250px;
+  height: calc(100vh - 60px);
+  background: #2a2a2a;
+  border-right: 1px solid #3a3a3a;
+  transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3);
+  position: fixed;
+  top: 60px;
+  left: 0;
+  z-index: 999;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid #3a3a3a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 60px;
+}
+
+.sidebar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.collapse-button {
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.collapse-button:hover {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+.sidebar-content {
+  padding: 10px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.menu-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+
+.menu-item:hover {
+  background: #3a3a3a;
+  border-left-color: #555;
+}
+
+.menu-item.active {
+  background: rgba(100, 108, 255, 0.15);
+  border-left-color: #646cff;
+}
+
+.menu-item.active .menu-icon,
+.menu-item.active .menu-label {
+  color: #646cff;
+}
+
+.menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-icon {
+  color: #999;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.menu-label {
+  font-weight: 500;
+  color: #ccc;
+  flex-grow: 1;
+}
+
+/* Collapsed state */
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 20px 10px;
+}
+
+.sidebar.collapsed .menu-item {
+  padding: 12px;
+  justify-content: center;
+}
+
+.sidebar.collapsed .menu-item-content {
+  justify-content: center;
+}
+
+.sidebar.collapsed .menu-label,
+.sidebar.collapsed .sidebar-title {
+  display: none;
+}
+
+/* Scrollbar styling */
+.sidebar-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 2px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
