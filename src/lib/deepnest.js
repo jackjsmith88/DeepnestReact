@@ -1208,6 +1208,8 @@ if (typeof window !== 'undefined') {
 						running--;
 					};
 					
+					console.log(`[GA] Sending individual ${i} to worker with rotations: [${GA.population[i].rotation ? GA.population[i].rotation.join(', ') : 'none'}]`);
+					
 					// Send data to worker
 					worker.postMessage({
 						type: 'background-start',
@@ -1428,10 +1430,20 @@ if (typeof window !== 'undefined') {
 		
 		this.population = [{placement: adam, rotation: angles}];
 		
+		// Always include an individual with all 0° rotations as baseline (guaranteed to fit if parts fit at all)
+		var zeroAngles = adam.map(() => 0);
+		this.population.push({placement: adam.slice(0), rotation: zeroAngles});
+		
+		// Also include one with all 90° rotations for variety
+		var ninetyAngles = adam.map(() => 90);
+		this.population.push({placement: adam.slice(0), rotation: ninetyAngles});
+		
 		while(this.population.length < config.populationSize){
 			var mutant = this.mutate(this.population[0]);
 			this.population.push(mutant);
 		}
+		
+		console.log('[GA] Initial population rotations:', this.population.map(p => p.rotation.join(',')));
 	}
 	
 	// returns a mutated individual with the given mutation rate

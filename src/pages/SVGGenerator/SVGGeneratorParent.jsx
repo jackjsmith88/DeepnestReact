@@ -16,7 +16,8 @@ import {
   downloadSVG, 
   detectDPI,
   generateRandomShapes,
-  generatePresetShapes
+  generatePresetShapes,
+  generateCountertopShapes
 } from './svgGeneratorUtils'
 
 /**
@@ -71,6 +72,14 @@ const SVGShapeGenerator = () => {
     setBinHeight(1600)
   }
 
+  const handleGenerateCountertop = () => {
+    const newShapes = generateCountertopShapes()
+    setShapes(newShapes)
+    setUnit('mm')
+    setBinWidth(3200)
+    setBinHeight(1600)
+  }
+
   const handleClearAll = () => {
     setShapes([])
   }
@@ -112,6 +121,7 @@ const SVGShapeGenerator = () => {
             <QuickPresets
               onGenerateRandom={handleGenerateRandom}
               onGeneratePreset={handleGeneratePreset}
+              onGenerateCountertop={handleGenerateCountertop}
               onClearAll={handleClearAll}
             />
 

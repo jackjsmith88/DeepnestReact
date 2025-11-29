@@ -698,7 +698,7 @@ export default function NestViewer({ nests, parts, onSelectNest, config }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              Nest {index + 1} ({(nest.fitness * 100)?.toFixed(1)}%)
+              Nest {index + 1} ({((nest.sheetUsage || 0) * 100).toFixed(1)}%)
             </button>
           ))}
         </div>
@@ -717,11 +717,11 @@ export default function NestViewer({ nests, parts, onSelectNest, config }) {
         gap: '10px'
       }}>
         <div style={{ fontSize: '14px' }}>
-          <strong style={{ color: '#fff' }}>Sheet Usage:</strong> {((nests[selectedNest]?.fitness || 0) * 100).toFixed(1)}%
+          <strong style={{ color: '#fff' }}>Sheet Usage:</strong> {((nests[selectedNest]?.sheetUsage || 0) * 100).toFixed(1)}%
           {' | '}
-          <strong style={{ color: '#fff' }}>Sheets:</strong> {nests[selectedNest]?.placements?.length || 1}
+          <strong style={{ color: '#fff' }}>Parts:</strong> {nests[selectedNest]?.placedCount || 0}/{nests[selectedNest]?.totalCount || 0}
           {' | '}
-          <strong style={{ color: '#fff' }}>Parts:</strong> {nests[selectedNest]?.placements?.[0]?.sheetplacements?.length || 0}
+          <strong style={{ color: '#fff' }}>Sheets:</strong> {nests[selectedNest]?.sheetsUsed || nests[selectedNest]?.placements?.length || 1}
           {config?.spacing > 0 && (
             <>
               {' | '}

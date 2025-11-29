@@ -1,8 +1,8 @@
 import React from 'react'
 import { Card, Row, Col, Button } from 'react-bootstrap'
-import { Dices, Ruler, Trash2 } from 'lucide-react'
+import { Dices, Ruler, Trash2, ChefHat } from 'lucide-react'
 
-const QuickPresets = ({ onGenerateRandom, onGeneratePreset, onClearAll }) => {
+const QuickPresets = ({ onGenerateRandom, onGeneratePreset, onGenerateCountertop, onClearAll }) => {
   return (
     <Card className="mb-4" style={{ 
       background: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
@@ -23,7 +23,7 @@ const QuickPresets = ({ onGenerateRandom, onGeneratePreset, onClearAll }) => {
           Generate preset shape collections for quick testing
         </Card.Text>
         <Row className="g-3">
-          <Col md={4}>
+          <Col md={3}>
             <Button 
               variant="outline-warning"
               className="w-100 text-start"
@@ -33,16 +33,16 @@ const QuickPresets = ({ onGenerateRandom, onGeneratePreset, onClearAll }) => {
               <div>
                 <div className="d-flex align-items-center mb-1">
                   <Dices size={18} className="me-2" />
-                  <strong>Random Mix (6-8 shapes)</strong>
+                  <strong>Random Mix</strong>
                 </div>
                 <small className="text-muted">
-                  Randomized L, T, U, and Rectangle shapes
+                  6-8 randomized L, T, U shapes
                 </small>
               </div>
             </Button>
           </Col>
           
-          <Col md={4}>
+          <Col md={3}>
             <Button 
               variant="outline-warning"
               className="w-100 text-start"
@@ -52,16 +52,35 @@ const QuickPresets = ({ onGenerateRandom, onGeneratePreset, onClearAll }) => {
               <div>
                 <div className="d-flex align-items-center mb-1">
                   <Ruler size={18} className="me-2" />
-                  <strong>Preset L/T/U Collection</strong>
+                  <strong>L/T/U Collection</strong>
                 </div>
                 <small className="text-muted">
-                  10 optimized shapes designed to fit 3200×1600mm
+                  10 optimized shapes for 3200×1600mm
                 </small>
               </div>
             </Button>
           </Col>
 
-          <Col md={4}>
+          <Col md={3}>
+            <Button 
+              variant="outline-warning"
+              className="w-100 text-start"
+              onClick={onGenerateCountertop}
+              style={{ height: '100%', minHeight: '80px' }}
+            >
+              <div>
+                <div className="d-flex align-items-center mb-1">
+                  <ChefHat size={18} className="me-2" />
+                  <strong>Kitchen Countertops</strong>
+                </div>
+                <small className="text-muted">
+                  Realistic worktop pieces (L + rectangles)
+                </small>
+              </div>
+            </Button>
+          </Col>
+
+          <Col md={3}>
             <Button 
               variant="secondary"
               className="w-100 text-start"

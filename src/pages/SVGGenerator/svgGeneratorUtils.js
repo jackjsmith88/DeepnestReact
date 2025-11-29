@@ -105,6 +105,60 @@ export const generatePresetShapes = (unit) => {
 }
 
 /**
+ * Generate realistic kitchen countertop shapes
+ * A small set of pieces that should fit in 3200x1600mm at 70-90% efficiency
+ * Typical small kitchen: one L-corner and 1-2 straight runs
+ */
+export const generateCountertopShapes = () => {
+  // 3200x1600mm = 5,120,000 mm² total area
+  // Target ~65-75% to ensure comfortable fit
+  
+  const presets = [
+    // Main L-shaped corner piece - typical corner worktop
+    // 1500mm x 1200mm with 600mm depth arms = ~1,260,000 mm²
+    { 
+      type: 'L', 
+      width: 1500, 
+      height: 1200, 
+      cutoutWidth: 900,  // Creates 600mm wide arm on right
+      cutoutHeight: 600, // Creates 600mm deep arm on top
+      rotation: 0, 
+      color: '#8B4513' // Saddle brown
+    },
+    
+    // Long straight run - sink/prep area
+    // 2200mm x 600mm = 1,320,000 mm²
+    { 
+      type: 'Rectangle', 
+      width: 2200, 
+      height: 600, 
+      cutoutWidth: 0, 
+      cutoutHeight: 0, 
+      rotation: 0, 
+      color: '#A0522D' // Sienna
+    },
+    
+    // Shorter straight run - hob area  
+    // 1200mm x 600mm = 720,000 mm²
+    { 
+      type: 'Rectangle', 
+      width: 1200, 
+      height: 600, 
+      cutoutWidth: 0, 
+      cutoutHeight: 0, 
+      rotation: 0, 
+      color: '#CD853F' // Peru
+    },
+  ]
+  // Total area: ~3,300,000 mm² = ~64% of sheet - comfortable fit
+  
+  return presets.map((preset, i) => ({
+    ...preset,
+    id: Date.now() + i
+  }))
+}
+
+/**
  * Convert mm to pixels based on DPI
  * @param {number} mm - Value in millimeters
  * @param {number} dpi - Dots per inch
