@@ -27,7 +27,7 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
     
     report += `--- NEST INFO ---\n`;
     report += `Selected Nest: ${selectedNest + 1}\n`;
-    report += `Fitness: ${nest.fitness?.toFixed(2)}\n`;
+    report += `Fitness: ${nest.fitness?.toFixed(4)} (lower is better, 1.0 = 100% sheet used)\n`;
     report += `Placements: ${nest.placements?.length || 0} sheets\n\n`;
     
     report += `--- PARTS INFO ---\n`;
@@ -73,17 +73,13 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
   };
   
   useEffect(() => {
-    console.log('[NestViewer] useEffect triggered - nests:', nests?.length, 'selectedNest:', selectedNest);
     if (nests && nests.length > 0 && parts) {
-      console.log('[NestViewer] Calling renderNest for nest', selectedNest);
       renderNest(nests[selectedNest]);
     }
   }, [nests, selectedNest, parts]);
   
   const renderNest = (nest) => {
     if (!nest || !nest.placements) return;
-    
-    console.log('[NestViewer] renderNest called - fitness:', nest.fitness?.toFixed(0), 'placements:', nest.placements?.length);
     
     const svg = svgRef.current;
     if (!svg) return;
@@ -105,7 +101,6 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
     }
     
     const sheetBounds = sheetPart.bounds;
-    console.log('[NestViewer] Sheet:', sheetIndex, 'bounds:', sheetBounds.width.toFixed(0), 'x', sheetBounds.height.toFixed(0));
     
     // The sheet's original position in the SVG
     const sheetOriginX = sheetBounds.x;
@@ -149,7 +144,6 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
       
       // Draw parts on this sheet
       if (sheetPlacement.sheetplacements) {
-        console.log('[NestViewer] Drawing', sheetPlacement.sheetplacements.length, 'parts on sheet', sheetPartIdx);
         
         // Build a map of non-sheet parts for source lookup
         const nonSheetParts = parts.filter(p => !p.sheet);
@@ -158,8 +152,6 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
           // source is the index in the original parts array (including sheets)
           const sourceIndex = partPlacement.source;
           const part = parts[sourceIndex];
-          
-          console.log(`[NestViewer] Part ${pIdx}: source=${sourceIndex}, placement=(${partPlacement.x?.toFixed(0)}, ${partPlacement.y?.toFixed(0)})`);
           
           if (!part) {
             console.warn('Part not found for source:', sourceIndex);
@@ -209,9 +201,6 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
           const finalX = partPlacement.x - sheetOriginX;
           const finalY = partPlacement.y - sheetOriginY;
           
-          console.log(`[NestViewer] Part ${pIdx} transform: translate=(${partPlacement.x?.toFixed(0)}, ${partPlacement.y?.toFixed(0)}), sheetOrigin=(${sheetOriginX.toFixed(0)}, ${sheetOriginY.toFixed(0)}), final=(${finalX.toFixed(0)}, ${finalY.toFixed(0)})`);
-          console.log(`[NestViewer] Part ${pIdx} bounds: (${part?.bounds?.x?.toFixed(0)}, ${part?.bounds?.y?.toFixed(0)}) ${part?.bounds?.width?.toFixed(0)}x${part?.bounds?.height?.toFixed(0)}`);
-          
           // Rotation is in degrees from the worker
           // The worker rotates the polygon around its center before computing placement.
           // We apply the same rotation in the viewer around the part's center.
@@ -253,7 +242,6 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
       svg.appendChild(sheetGroup);
     });
     
-    console.log('[NestViewer] Render complete - viewBox:', svg.getAttribute('viewBox'));
   };
   
   const handleNestSelection = (index) => {
@@ -297,7 +285,7 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              Nest {index + 1} (Fitness: {nest.fitness?.toFixed(0)})
+              Nest {index + 1} ({(nest.fitness * 100)?.toFixed(1)}%)
             </button>
           ))}
         </div>
@@ -314,9 +302,9 @@ export default function NestViewer({ nests, parts, onSelectNest }) {
         alignItems: 'center'
       }}>
         <div style={{ fontSize: '14px' }}>
-          <strong style={{ color: '#fff' }}>Best Fitness:</strong> {nests[selectedNest]?.fitness?.toFixed(2) || 'N/A'}
+          <strong style={{ color: '#fff' }}>Sheet Usage:</strong> {((nests[selectedNest]?.fitness || 0) * 100).toFixed(1)}%
           {' | '}
-          <strong style={{ color: '#fff' }}>Sheets Used:</strong> {nests[selectedNest]?.sheets || 1}
+          <strong style={{ color: '#fff' }}>Sheets Used:</strong> {nests[selectedNest]?.placements?.length || 1}
           {' | '}
           <strong style={{ color: '#fff' }}>Parts Placed:</strong> {nests[selectedNest]?.placements?.[0]?.sheetplacements?.length || 0}
         </div>

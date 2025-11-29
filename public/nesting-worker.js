@@ -31,21 +31,6 @@ function processNesting(data) {
   const { index, sheets, individual, config: userConfig, ids, sources, children, sheetsources } = data;
   
   try {
-    console.log(`[Worker] Processing nest index=${index}, parts=${individual?.placement?.length}`);
-    console.log(`[Worker] Sheets count: ${sheets?.length}`);
-    if (sheets && sheets[0]) {
-      const bounds = getPolygonBounds(sheets[0]);
-      console.log(`[Worker] First sheet bounds: (${bounds?.x?.toFixed(0)}, ${bounds?.y?.toFixed(0)}) ${bounds?.width?.toFixed(0)}x${bounds?.height?.toFixed(0)}`);
-      console.log(`[Worker] Sheet[0] point: (${sheets[0][0]?.x?.toFixed(0)}, ${sheets[0][0]?.y?.toFixed(0)})`);
-    }
-    if (individual?.placement?.[0]) {
-      const part0 = individual.placement[0];
-      const pbounds = getPolygonBounds(part0);
-      console.log(`[Worker] First part bounds: (${pbounds?.x?.toFixed(0)}, ${pbounds?.y?.toFixed(0)}) ${pbounds?.width?.toFixed(0)}x${pbounds?.height?.toFixed(0)}`);
-      console.log(`[Worker] First part[0] point: (${part0[0]?.x?.toFixed(0)}, ${part0[0]?.y?.toFixed(0)})`);
-      console.log(`[Worker] First part source: ${part0.source}, id: ${part0.id}, rotation: ${individual?.rotation?.[0]}`);
-    }
-    
     // Merge user config
     Object.assign(config, userConfig || {});
     
@@ -119,16 +104,14 @@ function placeParts(sheets, parts, config, nestindex) {
     r.id = parts[i].id;
     rotated.push(r);
     
-    // Log rotation effect on first part
-    if (i === 0 && parts[i].rotation !== 0) {
-      const beforeBounds = getPolygonBounds(parts[i]);
-      const afterBounds = getPolygonBounds(r);
-      console.log(`[Worker] Part 0 rotation=${parts[i].rotation}°`);
-      console.log(`[Worker] Before rotation bounds: (${beforeBounds.x.toFixed(0)}, ${beforeBounds.y.toFixed(0)}) ${beforeBounds.width.toFixed(0)}x${beforeBounds.height.toFixed(0)}`);
-      console.log(`[Worker] After rotation bounds: (${afterBounds.x.toFixed(0)}, ${afterBounds.y.toFixed(0)}) ${afterBounds.width.toFixed(0)}x${afterBounds.height.toFixed(0)}`);
-      console.log(`[Worker] Before part[0]: (${parts[i][0].x.toFixed(0)}, ${parts[i][0].y.toFixed(0)})`);
-      console.log(`[Worker] After part[0]: (${r[0].x.toFixed(0)}, ${r[0].y.toFixed(0)})`);
-    }
+    // Log rotation effect on first part (debug only)
+    // if (i === 0 && parts[i].rotation !== 0) {
+    //   const beforeBounds = getPolygonBounds(parts[i]);
+    //   const afterBounds = getPolygonBounds(r);
+    //   console.log(`[Worker] Part 0 rotation=${parts[i].rotation}°`);
+    //   console.log(`[Worker] Before rotation bounds: (${beforeBounds.x.toFixed(0)}, ${beforeBounds.y.toFixed(0)})`);
+    //   console.log(`[Worker] After rotation bounds: (${afterBounds.x.toFixed(0)}, ${afterBounds.y.toFixed(0)})`);
+    // }
   }
   parts = rotated;
   
@@ -145,8 +128,8 @@ function placeParts(sheets, parts, config, nestindex) {
     if (!sheet) break;
     
     let sheetArea = Math.abs(polygonArea(sheet));
+    let sheetBounds = getPolygonBounds(sheet);
     totalSheetArea += sheetArea;
-    fitness += sheetArea; // Penalize each new sheet
     
     for (let i = 0; i < parts.length; i++) {
       let part = parts[i];
@@ -209,11 +192,19 @@ function placeParts(sheets, parts, config, nestindex) {
       }
     }
     
-    // Update fitness based on used width
+    // Update fitness based on used width (as ratio of sheet width)
     if (placed.length > 0) {
       let bounds = getBoundsOfPlacements(placed, placements);
       minwidth = bounds.width;
-      fitness += (minwidth / sheetArea) + bounds.width * bounds.height;
+      // Fitness based on how much of the sheet width is used (lower is better)
+      // Using width ratio as primary metric, with small height component
+      let widthRatio = minwidth / sheetBounds.width;
+      let heightRatio = bounds.height / sheetBounds.height;
+      // Weight width more heavily (we want to minimize horizontal spread)
+      fitness += widthRatio + (heightRatio * 0.1);
+    } else {
+      // Penalize unused sheet
+      fitness += 2;
     }
     
     // Remove placed parts from the list
@@ -237,12 +228,12 @@ function placeParts(sheets, parts, config, nestindex) {
     if (sheets.length === 0) break;
   }
   
-  // Heavily penalize unplaced parts
+  // Heavily penalize unplaced parts (each unplaced part adds 10 to fitness)
   for (let i = 0; i < parts.length; i++) {
-    fitness += 100000000 * (Math.abs(polygonArea(parts[i])) / totalSheetArea);
+    fitness += 10;
   }
   
-  console.log(`[Worker] Placed ${totalParts - parts.length}/${totalParts} parts, fitness=${fitness.toFixed(2)}`);
+  console.log(`[Worker] Placed ${totalParts - parts.length}/${totalParts} parts, fitness=${fitness.toFixed(4)}, minwidth=${minwidth.toFixed(0)}`);
   
   return {
     placements: allplacements,
@@ -264,10 +255,6 @@ function getSimpleInnerNfp(sheet, part) {
   let partBounds = getPolygonBounds(part);
   
   if (!sheetBounds || !partBounds) return null;
-  
-  console.log(`[Worker] Sheet bounds: (${sheetBounds.x.toFixed(0)}, ${sheetBounds.y.toFixed(0)}) ${sheetBounds.width.toFixed(0)}x${sheetBounds.height.toFixed(0)}`);
-  console.log(`[Worker] Part bounds: (${partBounds.x.toFixed(0)}, ${partBounds.y.toFixed(0)}) ${partBounds.width.toFixed(0)}x${partBounds.height.toFixed(0)}`);
-  console.log(`[Worker] Part[0]: (${part[0].x.toFixed(0)}, ${part[0].y.toFixed(0)})`);
   
   // The part's first point position relative to the part's bounding box
   // part[0] is at (part[0].x, part[0].y) 
@@ -302,8 +289,6 @@ function getSimpleInnerNfp(sheet, part) {
     { x: maxX, y: maxY },
     { x: minX, y: maxY }
   ];
-  
-  console.log(`[Worker] InnerNFP: part[0] can be at x:[${minX.toFixed(0)}-${maxX.toFixed(0)}] y:[${minY.toFixed(0)}-${maxY.toFixed(0)}]`);
   
   return [innerNfp];
 }
@@ -496,10 +481,6 @@ function findFirstPlacement(sheetNfp, part) {
         };
       }
     }
-  }
-  
-  if (position) {
-    console.log(`[Worker] First placement: part ${part.source} at translate(${position.x.toFixed(0)}, ${position.y.toFixed(0)})`);
   }
   
   return position;
