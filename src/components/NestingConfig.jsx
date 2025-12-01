@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 // Default scale (72 DPI)
 const DEFAULT_SCALE = 72;
@@ -24,6 +24,52 @@ const fromPixels = (px, unit, scale = DEFAULT_SCALE) => {
   return px; // already pixels
 };
 
+// Info tooltip component
+function InfoTooltip({ text }) {
+  const [show, setShow] = useState(false);
+  
+  return (
+    <span 
+      style={{ position: 'relative', display: 'inline-flex', marginLeft: '6px', cursor: 'help' }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <Info size={14} color="#666" />
+      {show && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginBottom: '8px',
+          padding: '10px 12px',
+          background: '#1a1a1a',
+          border: '1px solid #444',
+          borderRadius: '6px',
+          color: '#ddd',
+          fontSize: '12px',
+          lineHeight: '1.5',
+          width: '220px',
+          zIndex: 1000,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          whiteSpace: 'normal'
+        }}>
+          {text}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: '6px solid #444'
+          }} />
+        </div>
+      )}
+    </span>
+  );
+}
+
 const inputStyle = {
   width: '100%',
   padding: '8px 10px',
@@ -35,7 +81,8 @@ const inputStyle = {
 };
 
 const labelStyle = {
-  display: 'block',
+  display: 'flex',
+  alignItems: 'center',
   marginBottom: '4px',
   color: '#ccc',
   fontSize: '12px',
@@ -124,7 +171,10 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
             <div style={sectionTitleStyle}>Units & Spacing</div>
             
             <div style={fieldStyle}>
-              <label style={labelStyle}>Units</label>
+              <label style={labelStyle}>
+                Units
+                <InfoTooltip text="The measurement unit used for spacing and padding values. Choose the unit that matches your design software." />
+              </label>
               <select
                 value={config.units || 'inch'}
                 onChange={(e) => handleChange('units', e.target.value)}
@@ -143,6 +193,7 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
                 <span style={{ color: '#666', marginLeft: '4px' }}>
                   ({config.units || 'inch'})
                 </span>
+                <InfoTooltip text="The gap between nested parts. Set this to your cutting tool width (laser kerf, router bit diameter, or blade thickness) to prevent parts from touching." />
               </label>
               <input
                 type="number"
@@ -157,9 +208,6 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
                 step={config.units === 'mm' ? '1' : '0.1'}
                 style={inputStyle}
               />
-              <small style={{ color: '#666', fontSize: '11px' }}>
-                Gap between parts (blade/laser width)
-              </small>
             </div>
 
             <div style={fieldStyle}>
@@ -168,6 +216,7 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
                 <span style={{ color: '#666', marginLeft: '4px' }}>
                   ({config.units || 'inch'})
                 </span>
+                <InfoTooltip text="Margin from the sheet edges. Use this to keep parts away from sheet borders for clamping, tension release cuts, or material defects." />
               </label>
               <input
                 type="number"
@@ -182,13 +231,13 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
                 step={config.units === 'mm' ? '1' : '0.1'}
                 style={inputStyle}
               />
-              <small style={{ color: '#666', fontSize: '11px' }}>
-                Margin from sheet edges (for tension release cuts)
-              </small>
             </div>
 
             <div style={fieldStyle}>
-              <label style={labelStyle}>Curve Tolerance</label>
+              <label style={labelStyle}>
+                Curve Tolerance
+                <InfoTooltip text="Controls how accurately curves are converted to line segments. Lower values = more accurate curves but slower processing. Range: 0.01 (precise) to 1 (fast)." />
+              </label>
               <input
                 type="number"
                 value={config.curveTolerance || 0.3}
@@ -199,9 +248,6 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
                 step="0.05"
                 style={inputStyle}
               />
-              <small style={{ color: '#666', fontSize: '11px' }}>
-                Lower = more accurate curves, slower processing
-              </small>
             </div>
           </div>
 
@@ -210,7 +256,10 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
             <div style={sectionTitleStyle}>Rotation & Placement</div>
             
             <div style={fieldStyle}>
-              <label style={labelStyle}>Allowed Rotations</label>
+              <label style={labelStyle}>
+                Allowed Rotations
+                <InfoTooltip text="Number of rotation angles to try for each part. More rotations can find tighter fits but increases processing time. Use fewer rotations for parts with grain direction requirements." />
+              </label>
               <select
                 value={config.rotations || 4}
                 onChange={(e) => handleChange('rotations', parseInt(e.target.value))}
@@ -224,7 +273,10 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
             </div>
 
             <div style={fieldStyle}>
-              <label style={labelStyle}>Placement Strategy</label>
+              <label style={labelStyle}>
+                Placement Strategy
+                <InfoTooltip text="How parts are positioned on the sheet. Gravity places parts bottom-left for efficient strip cutting. Bounding Box minimizes overall area. Convex Hull creates tighter clusters." />
+              </label>
               <select
                 value={config.placementType || 'gravity'}
                 onChange={(e) => handleChange('placementType', e.target.value)}
@@ -244,7 +296,10 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div style={fieldStyle}>
-                <label style={labelStyle}>Population Size</label>
+                <label style={labelStyle}>
+                  Population Size
+                  <InfoTooltip text="Number of solutions evolved each generation. Larger populations explore more possibilities but run slower. Recommended: 10-20 for most jobs." />
+                </label>
                 <input
                   type="number"
                   value={config.populationSize || 10}
@@ -257,7 +312,10 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
               </div>
 
               <div style={fieldStyle}>
-                <label style={labelStyle}>Mutation Rate (%)</label>
+                <label style={labelStyle}>
+                  Mutation Rate (%)
+                  <InfoTooltip text="Chance of random changes in each generation. Higher values explore more variations but may miss optimal solutions. Recommended: 10-25%." />
+                </label>
                 <input
                   type="number"
                   value={config.mutationRate || 10}
@@ -269,10 +327,6 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
                 />
               </div>
             </div>
-
-            <small style={{ color: '#666', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-              Higher population = more thorough search but slower. Higher mutation = more exploration.
-            </small>
           </div>
 
           {/* Advanced Options Section */}
@@ -290,12 +344,13 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
               }}>
                 <input
                   type="checkbox"
-                  checked={config.mergeLines !== false}
-                  onChange={(e) => handleChange('mergeLines', e.target.checked)}
+                  checked={config.simplify === true}
+                  onChange={(e) => handleChange('simplify', e.target.checked)}
                   disabled={disabled}
                   style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
                 />
-                Merge overlapping lines
+                Simplify polygons
+                <InfoTooltip text="Reduces polygon complexity for faster processing. May slightly reduce nesting accuracy. Enable for complex parts or large jobs." />
               </label>
 
               <label style={{ 
@@ -308,12 +363,13 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
               }}>
                 <input
                   type="checkbox"
-                  checked={config.simplify === true}
-                  onChange={(e) => handleChange('simplify', e.target.checked)}
+                  checked={config.exploreConcave !== false}
+                  onChange={(e) => handleChange('exploreConcave', e.target.checked)}
                   disabled={disabled}
                   style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
                 />
-                Simplify polygons (faster, less accurate)
+                Explore concave regions
+                <InfoTooltip text="Allows parts to nest inside concave areas of other parts (e.g., inside an L-shape). Improves material usage but increases processing time." />
               </label>
             </div>
           </div>
