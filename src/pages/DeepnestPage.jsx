@@ -3,6 +3,7 @@ import { useDeepnest } from '../hooks/useDeepnest'
 import { PartsTable } from '../components/PartsTable'
 import { FileImport } from '../components/FileImport'
 import NestViewer from '../components/NestViewer'
+import NestingConfig from '../components/NestingConfig'
 
 export default function DeepnestPage() {
   const [viewMode, setViewMode] = useState('parts') // 'parts', 'preview', 'nesting'
@@ -140,26 +141,53 @@ export default function DeepnestPage() {
 
       {/* Content Area */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {/* Parts List View */}
+        {/* Parts List View - with config sidebar */}
         {viewMode === 'parts' && (
-          <div style={{ padding: '20px', overflow: 'auto', height: '100%', background: '#1a1a1a' }}>
-            <PartsTable
-              parts={parts}
-              onDelete={deletePart}
-              onQuantityChange={updatePartQuantity}
-              onSheetToggle={toggleSheet}
-            />
+          <div style={{ 
+            display: 'flex', 
+            height: '100%', 
+            background: '#1a1a1a'
+          }}>
+            {/* Main content area */}
+            <div style={{ 
+              flex: 1, 
+              padding: '20px', 
+              overflow: 'auto'
+            }}>
+              <PartsTable
+                parts={parts}
+                onDelete={deletePart}
+                onQuantityChange={updatePartQuantity}
+                onSheetToggle={toggleSheet}
+              />
 
-            {imports.length > 0 && (
-              <div className="imports-section" style={{ marginTop: '20px' }}>
-                <h2 style={{ color: '#fff' }}>Imported Files</h2>
-                <ul style={{ color: '#ccc' }}>
-                  {imports.map((imp, i) => (
-                    <li key={i}>{imp.filename}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              {imports.length > 0 && (
+                <div className="imports-section" style={{ marginTop: '20px' }}>
+                  <h2 style={{ color: '#fff' }}>Imported Files</h2>
+                  <ul style={{ color: '#ccc' }}>
+                    {imports.map((imp, i) => (
+                      <li key={i}>{imp.filename}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Config sidebar */}
+            <div style={{ 
+              width: '320px', 
+              minWidth: '320px',
+              padding: '20px',
+              borderLeft: '1px solid #3a3a3a',
+              overflow: 'auto',
+              background: '#1e1e1e'
+            }}>
+              <NestingConfig 
+                config={config} 
+                onConfigChange={updateConfig}
+                disabled={isNesting}
+              />
+            </div>
           </div>
         )}
 

@@ -30,8 +30,6 @@ self.onmessage = function(e) {
 function processNesting(data) {
   const { index, sheets, individual, config: userConfig, ids, sources, children, sheetsources } = data;
   
-  console.log(`[Worker] Processing individual #${index}, rotations received: [${individual.rotation ? individual.rotation.join(', ') : 'none'}]`);
-  
   try {
     // Merge user config
     Object.assign(config, userConfig || {});
@@ -104,14 +102,6 @@ function placeParts(sheets, parts, config, nestindex) {
   let totalUsedArea = 0;  // Bounding box area of placed parts (actual material usage)
   let sheetsUsed = 0;
   
-  console.log(`[Worker] Starting placement of ${totalParts} parts`);
-  
-  // Log part info before rotation
-  for (let i = 0; i < parts.length; i++) {
-    let bounds = getPolygonBounds(parts[i]);
-    console.log(`[Worker] Part ${i} BEFORE rotation: bounds=(${bounds.x.toFixed(0)}, ${bounds.y.toFixed(0)}) ${bounds.width.toFixed(0)}x${bounds.height.toFixed(0)}, rotation=${parts[i].rotation}`);
-  }
-  
   // Rotate parts by their assigned rotation
   let rotated = [];
   for (let i = 0; i < parts.length; i++) {
@@ -122,12 +112,6 @@ function placeParts(sheets, parts, config, nestindex) {
     rotated.push(r);
   }
   parts = rotated;
-  
-  // Log part info after rotation
-  for (let i = 0; i < parts.length; i++) {
-    let bounds = getPolygonBounds(parts[i]);
-    console.log(`[Worker] Part ${i} AFTER rotation: bounds=(${bounds.x.toFixed(0)}, ${bounds.y.toFixed(0)}) ${bounds.width.toFixed(0)}x${bounds.height.toFixed(0)}`);
-  }
   
   let allplacements = [];
   let fitness = 0;
@@ -146,23 +130,12 @@ function placeParts(sheets, parts, config, nestindex) {
     totalSheetArea += sheetArea;
     sheetsUsed++;
     
-    console.log(`[Worker] Sheet bounds: (${sheetBounds.x.toFixed(0)}, ${sheetBounds.y.toFixed(0)}) ${sheetBounds.width.toFixed(0)}x${sheetBounds.height.toFixed(0)}`);
-    
     for (let i = 0; i < parts.length; i++) {
       let part = parts[i];
       let partBounds = getPolygonBounds(part);
       
-      console.log(`[Worker] Trying to place part ${i}: bounds=(${partBounds.x.toFixed(0)}, ${partBounds.y.toFixed(0)}) ${partBounds.width.toFixed(0)}x${partBounds.height.toFixed(0)}`);
-      
       // Get inner NFP (where the part can be placed inside the sheet)
       let sheetNfp = getInnerNfp(sheet, part, config);
-      
-      if (sheetNfp && sheetNfp.length > 0) {
-        let nfpBounds = getPolygonBounds(sheetNfp[0]);
-        console.log(`[Worker] Inner NFP bounds: (${nfpBounds.x.toFixed(0)}, ${nfpBounds.y.toFixed(0)}) ${nfpBounds.width.toFixed(0)}x${nfpBounds.height.toFixed(0)}`);
-      } else {
-        console.log(`[Worker] No inner NFP - part doesn't fit!`);
-      }
       
       // Try rotations if needed
       if (!sheetNfp || sheetNfp.length === 0) {
@@ -181,7 +154,6 @@ function placeParts(sheets, parts, config, nestindex) {
       
       // Part unplaceable on this sheet
       if (!sheetNfp || sheetNfp.length === 0) {
-        console.log(`[Worker] Part ${i} CANNOT be placed on this sheet (doesn't fit)`);
         continue;
       }
       
@@ -191,11 +163,6 @@ function placeParts(sheets, parts, config, nestindex) {
         // First part - place at top-left corner
         position = findFirstPlacement(sheetNfp, part);
         if (position) {
-          console.log(`[Worker] First placement: part ${i} at translate(${position.x.toFixed(0)}, ${position.y.toFixed(0)}), rotation=${position.rotation}`);
-          // Verify expected position
-          let expectedX = part[0].x + position.x;
-          let expectedY = part[0].y + position.y;
-          console.log(`[Worker] Part[0] original=(${part[0].x.toFixed(0)}, ${part[0].y.toFixed(0)}), expected final=(${expectedX.toFixed(0)}, ${expectedY.toFixed(0)})`);
           placements.push(position);
           placed.push(part);
         }
@@ -206,7 +173,6 @@ function placeParts(sheets, parts, config, nestindex) {
       let combinedNfp = getCombinedNfp(placed, placements, part, config);
       
       if (!combinedNfp) {
-        console.log(`[Worker] No combined NFP for part ${i}`);
         continue;
       }
       
@@ -214,21 +180,15 @@ function placeParts(sheets, parts, config, nestindex) {
       let finalNfp = subtractNfps(sheetNfp, combinedNfp, config);
       
       if (!finalNfp || finalNfp.length === 0) {
-        console.log(`[Worker] No valid positions for part ${i} (finalNfp empty)`);
         continue;
       }
-      
-      console.log(`[Worker] FinalNfp has ${finalNfp.length} regions for part ${i}`);
       
       // Choose best placement position
       position = findBestPlacement(finalNfp, part, placed, placements, config);
       
       if (position) {
-        console.log(`[Worker] Placed part ${i} at translate(${position.x.toFixed(0)}, ${position.y.toFixed(0)}), rotation=${position.rotation}`);
         placed.push(part);
         placements.push(position);
-      } else {
-        console.log(`[Worker] Could not find placement for part ${i}`);
       }
     }
     
@@ -280,8 +240,6 @@ function placeParts(sheets, parts, config, nestindex) {
   
   const placedCount = totalParts - parts.length;
   const sheetUsage = totalSheetArea > 0 ? (totalUsedArea / totalSheetArea) : 0;
-  
-  console.log(`[Worker] Placed ${placedCount}/${totalParts} parts, fitness=${fitness.toFixed(4)}, minwidth=${minwidth.toFixed(0)}, sheetUsage=${(sheetUsage * 100).toFixed(1)}%`);
   
   return {
     placements: allplacements,

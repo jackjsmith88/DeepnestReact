@@ -1037,7 +1037,6 @@ if (typeof window !== 'undefined') {
 	
 	// Handle background response - called from Web Worker
 	this.handleBackgroundResponse = function(payload) {
-		console.log(`[DeepNest] Response index=${payload.index}, fitness=${payload.fitness?.toFixed(0)}`);
 		if(!GA){
 			// user might have quit while we're away
 			return;
@@ -1053,7 +1052,6 @@ if (typeof window !== 'undefined') {
 				this.nests.pop();
 			}
 			// Only call displayCallback if it exists and is a function
-			console.log(`[DeepNest] New best! Calling displayCallback with ${this.nests.length} nests`);
 			if(displayCallback && typeof displayCallback === 'function'){
 				displayCallback(this.nests);
 			}
@@ -1207,8 +1205,6 @@ if (typeof window !== 'undefined') {
 						worker.terminate();
 						running--;
 					};
-					
-					console.log(`[GA] Sending individual ${i} to worker with rotations: [${GA.population[i].rotation ? GA.population[i].rotation.join(', ') : 'none'}]`);
 					
 					// Send data to worker
 					worker.postMessage({
@@ -1442,8 +1438,6 @@ if (typeof window !== 'undefined') {
 			var mutant = this.mutate(this.population[0]);
 			this.population.push(mutant);
 		}
-		
-		console.log('[GA] Initial population rotations:', this.population.map(p => p.rotation.join(',')));
 	}
 	
 	// returns a mutated individual with the given mutation rate

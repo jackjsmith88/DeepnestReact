@@ -78,11 +78,11 @@ export function useDeepnest() {
     
     const displayCallback = (nestsArray) => {
       // Update display when new results are available
-      console.log('[useDeepnest] displayCallback received', nestsArray?.length, 'nests');
+      // displayCallback received nests
       if (nestsArray && nestsArray.length > 0) {
         // Deep clone to ensure React detects the change
         const clonedNests = JSON.parse(JSON.stringify(nestsArray));
-        console.log('[useDeepnest] Setting nests state with', clonedNests.length, 'items');
+        // Setting nests state
         setNests(clonedNests);
       }
     };
@@ -105,11 +105,24 @@ export function useDeepnest() {
     setIsNesting(false);
   }, []);
 
-  const updateConfig = useCallback((key, value) => {
-    setConfig(prev => ({
-      ...prev,
-      [key]: value
-    }));
+  const updateConfig = useCallback((keyOrConfig, value) => {
+    // Support both updateConfig({...newConfig}) and updateConfig('key', value)
+    if (typeof keyOrConfig === 'object') {
+      setConfig(keyOrConfig);
+      // Also update the DeepNest instance config
+      if (deepnestRef.current) {
+        deepnestRef.current.config(keyOrConfig);
+      }
+    } else {
+      setConfig(prev => {
+        const newConfig = { ...prev, [keyOrConfig]: value };
+        // Also update the DeepNest instance config
+        if (deepnestRef.current) {
+          deepnestRef.current.config(newConfig);
+        }
+        return newConfig;
+      });
+    }
   }, []);
 
   return {

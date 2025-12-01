@@ -173,8 +173,6 @@
 		// for numerically accurate exports
 		this.mergeLines(this.svgRoot, this.conf.toleranceSvg);
 		
-		console.log('this is the scale ',this.conf.scale*(0.02), this.conf.endpointTolerance);	
-		//console.log('scale',this.conf.scale);
 		// for exports with wide gaps, roughly 0.005 inch
 		this.mergeLines(this.svgRoot, this.conf.endpointTolerance);
 		// finally close any open paths with a really wide margin
