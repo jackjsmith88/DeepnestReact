@@ -16,7 +16,6 @@ const initialConfig = {
   mergeLines: true,
   timeRatio: 0.5,
   simplify: false,
-  exploreConcave: true,  // Explore concave areas of NFP for better fitting
 };
 
 export function useDeepnest() {

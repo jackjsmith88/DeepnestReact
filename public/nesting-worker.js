@@ -10,11 +10,7 @@ const config = {
   rotations: 4, // 0, 90, 180, 270 degrees
   placementType: 'gravity', // 'gravity', 'box', or 'hull'
   curveTolerance: 0.3,
-  spacing: 0,
-  scale: 72,
-  mergeLines: true,
-  timeRatio: 0.5,
-  exploreConcave: true
+  spacing: 0
 };
 
 // NFP cache
@@ -335,7 +331,7 @@ function getFrame(A) {
 // Get outer NFP between two polygons using ClipperLib MinkowskiSum
 function getOuterNfp(A, B, inside) {
   // Check cache
-  let cacheKey = `${A.source || 'A'}_${B.source || 'B'}_${A.rotation || 0}_${B.rotation || 0}_${inside}_${config.exploreConcave}`;
+  let cacheKey = `${A.source || 'A'}_${B.source || 'B'}_${A.rotation || 0}_${B.rotation || 0}_${inside}`;
   if (nfpCache.has(cacheKey)) {
     return nfpCache.get(cacheKey);
   }
@@ -363,21 +359,13 @@ function getOuterNfp(A, B, inside) {
       // Find the largest area polygon (outer NFP)
       let clipperNfp = null;
       let largestArea = null;
-      let nfpChildren = []; // Collect smaller polygons as potential concave areas
       
       for (let i = 0; i < solution.length; i++) {
         let n = toNestCoordinates(solution[i], config.clipperScale);
         let sarea = -polygonArea(n);
         if (largestArea === null || largestArea < sarea) {
-          // If we had a previous largest, it might be a child (concave area)
-          if (clipperNfp !== null && config.exploreConcave) {
-            nfpChildren.push(clipperNfp);
-          }
           clipperNfp = n;
           largestArea = sarea;
-        } else if (config.exploreConcave && sarea > 0) {
-          // Smaller positive-area polygons are potential concave placement areas
-          nfpChildren.push(n);
         }
       }
       
@@ -386,19 +374,6 @@ function getOuterNfp(A, B, inside) {
         for (let i = 0; i < clipperNfp.length; i++) {
           clipperNfp[i].x += B[0].x;
           clipperNfp[i].y += B[0].y;
-        }
-        
-        // Also offset children if exploreConcave is enabled
-        if (config.exploreConcave && nfpChildren.length > 0) {
-          clipperNfp.children = [];
-          for (let c = 0; c < nfpChildren.length; c++) {
-            let child = nfpChildren[c];
-            for (let i = 0; i < child.length; i++) {
-              child[i].x += B[0].x;
-              child[i].y += B[0].y;
-            }
-            clipperNfp.children.push(child);
-          }
         }
       }
       
@@ -447,31 +422,6 @@ function getCombinedNfp(placed, placements, part, config) {
     ClipperLib.JS.ScaleUpPath(clipperNfp, config.clipperScale);
     
     clipper.AddPath(clipperNfp, ClipperLib.PolyType.ptSubject, true);
-    
-    // If exploreConcave is enabled and NFP has children (concave areas), include them
-    if (config.exploreConcave && nfp.children && nfp.children.length > 0) {
-      for (let c = 0; c < nfp.children.length; c++) {
-        let child = nfp.children[c];
-        // Shift child to placed location
-        let shiftedChild = [];
-        for (let m = 0; m < child.length; m++) {
-          shiftedChild.push({
-            x: child[m].x + placements[j].x,
-            y: child[m].y + placements[j].y
-          });
-        }
-        
-        // Ensure correct winding order for holes (should be opposite to outer)
-        let childArea = polygonArea(shiftedChild);
-        if (childArea < 0) {
-          shiftedChild.reverse();
-        }
-        
-        let clipperChild = toClipperCoordinates(shiftedChild);
-        ClipperLib.JS.ScaleUpPath(clipperChild, config.clipperScale);
-        clipper.AddPath(clipperChild, ClipperLib.PolyType.ptSubject, true);
-      }
-    }
   }
   
   // Union all NFPs
@@ -569,18 +519,6 @@ function findBestPlacement(finalNfp, part, placed, placements, config) {
   let allbounds = getPolygonBounds(allpoints);
   let partbounds = getPolygonBounds(part);
   
-  // Pre-calculate shifted placed parts for mergeLines (if enabled)
-  let shiftedPlaced = null;
-  if (config.mergeLines) {
-    shiftedPlaced = [];
-    for (let m = 0; m < placed.length; m++) {
-      shiftedPlaced.push(shiftPolygon(placed[m], placements[m]));
-    }
-  }
-  
-  // Minimum line length for mergeLines - about 0.5 inches at current scale
-  const minMergeLength = 0.5 * (config.scale || 72);
-  
   // Evaluate each potential position
   for (let j = 0; j < finalNfp.length; j++) {
     let nf = finalNfp[j];
@@ -616,15 +554,6 @@ function findBestPlacement(finalNfp, part, placed, placements, config) {
         area = rectbounds.width * rectbounds.height;
       }
       
-      // Merge lines optimization: subtract line overlap savings from area score
-      let merged = null;
-      if (config.mergeLines && shiftedPlaced) {
-        const shiftedPart = shiftPolygon(part, shiftvector);
-        merged = mergedLength(shiftedPlaced, shiftedPart, minMergeLength, 0.1 * config.curveTolerance);
-        // Reduce area score by merged length * timeRatio (overlapping lines save cut time)
-        area -= merged.totalLength * (config.timeRatio || 0.5);
-      }
-      
       // Choose minimum area, with tiebreakers for x and y position
       if (minarea === null ||
           area < minarea ||
@@ -638,12 +567,6 @@ function findBestPlacement(finalNfp, part, placed, placements, config) {
         }
         if (miny === null || shiftvector.y < miny) {
           miny = shiftvector.y;
-        }
-        
-        // Store merge info on position for potential reporting
-        if (merged) {
-          position.mergedLength = merged.totalLength;
-          position.mergedSegments = merged.segments;
         }
       }
     }
@@ -752,163 +675,6 @@ const TOL = Math.pow(10, -9);
 function almostEqual(a, b, tolerance) {
   if (!tolerance) tolerance = TOL;
   return Math.abs(a - b) < tolerance;
-}
-
-// ==================== Merge Lines Support ====================
-
-/**
- * Shift a polygon by a vector, preserving exact flags and children
- */
-function shiftPolygon(p, shift) {
-  let shifted = [];
-  for (let i = 0; i < p.length; i++) {
-    shifted.push({ x: p[i].x + shift.x, y: p[i].y + shift.y, exact: p[i].exact });
-  }
-  if (p.children && p.children.length) {
-    shifted.children = [];
-    for (let i = 0; i < p.children.length; i++) {
-      shifted.children.push(shiftPolygon(p.children[i], shift));
-    }
-  }
-  return shifted;
-}
-
-/**
- * Calculate the total length of merged/overlapping lines between parts.
- * Returns the total length of line segments that can be shared between adjacent parts
- * (reducing cut time when laser/router can skip overlapping edges).
- * 
- * @param {Array} parts - Array of already-placed polygon parts
- * @param {Array} p - The new part being evaluated
- * @param {number} minlength - Minimum line length to consider (filters small segments)
- * @param {number} tolerance - Tolerance for considering lines as overlapping
- * @returns {{totalLength: number, segments: Array}} Total merged length and segment list
- */
-function mergedLength(parts, p, minlength, tolerance) {
-  const min2 = minlength * minlength;
-  let totalLength = 0;
-  let segments = [];
-
-  for (let i = 0; i < p.length; i++) {
-    const A1 = p[i];
-    const A2 = (i + 1 === p.length) ? p[0] : p[i + 1];
-
-    // Skip non-exact points (simplified/curved segments)
-    if (!A1.exact || !A2.exact) {
-      continue;
-    }
-
-    const Ax2 = (A2.x - A1.x) * (A2.x - A1.x);
-    const Ay2 = (A2.y - A1.y) * (A2.y - A1.y);
-
-    // Skip short segments
-    if (Ax2 + Ay2 < min2) {
-      continue;
-    }
-
-    // Calculate rotation to make A1-A2 horizontal
-    const angle = Math.atan2(A2.y - A1.y, A2.x - A1.x);
-    const c = Math.cos(-angle);
-    const s = Math.sin(-angle);
-    const c2 = Math.cos(angle);
-    const s2 = Math.sin(angle);
-
-    const relA2 = { x: A2.x - A1.x, y: A2.y - A1.y };
-    const rotA2x = relA2.x * c - relA2.y * s;
-
-    for (let j = 0; j < parts.length; j++) {
-      const B = parts[j];
-      if (B.length > 1) {
-        for (let k = 0; k < B.length; k++) {
-          const B1 = B[k];
-          const B2 = (k + 1 === B.length) ? B[0] : B[k + 1];
-
-          if (!B1.exact || !B2.exact) {
-            continue;
-          }
-
-          const Bx2 = (B2.x - B1.x) * (B2.x - B1.x);
-          const By2 = (B2.y - B1.y) * (B2.y - B1.y);
-
-          if (Bx2 + By2 < min2) {
-            continue;
-          }
-
-          // B relative to A1 (our point of rotation)
-          const relB1 = { x: B1.x - A1.x, y: B1.y - A1.y };
-          const relB2 = { x: B2.x - A1.x, y: B2.y - A1.y };
-
-          // Rotate so A1-A2 is horizontal
-          const rotB1 = { x: relB1.x * c - relB1.y * s, y: relB1.x * s + relB1.y * c };
-          const rotB2 = { x: relB2.x * c - relB2.y * s, y: relB2.x * s + relB2.y * c };
-
-          // Check if B is on the same horizontal line (y ≈ 0)
-          if (!almostEqual(rotB1.y, 0, tolerance) || !almostEqual(rotB2.y, 0, tolerance)) {
-            continue;
-          }
-
-          const min1 = Math.min(0, rotA2x);
-          const max1 = Math.max(0, rotA2x);
-          const min2val = Math.min(rotB1.x, rotB2.x);
-          const max2val = Math.max(rotB1.x, rotB2.x);
-
-          // Check for overlap
-          if (min2val >= max1 || max2val <= min1) {
-            continue;
-          }
-
-          let len = 0;
-          let relC1x = 0;
-          let relC2x = 0;
-
-          // Calculate overlap length
-          if (almostEqual(min1, min2val) && almostEqual(max1, max2val)) {
-            // A is B (same line)
-            len = max1 - min1;
-            relC1x = min1;
-            relC2x = max1;
-          } else if (min1 > min2val && max1 < max2val) {
-            // A inside B
-            len = max1 - min1;
-            relC1x = min1;
-            relC2x = max1;
-          } else if (min2val > min1 && max2val < max1) {
-            // B inside A
-            len = max2val - min2val;
-            relC1x = min2val;
-            relC2x = max2val;
-          } else {
-            // Partial overlap
-            len = Math.max(0, Math.min(max1, max2val) - Math.max(min1, min2val));
-            relC1x = Math.min(max1, max2val);
-            relC2x = Math.max(min1, min2val);
-          }
-
-          if (len * len > min2) {
-            totalLength += len;
-
-            // Convert overlap points back to original coordinates
-            const relC1 = { x: relC1x * c2, y: relC1x * s2 };
-            const relC2 = { x: relC2x * c2, y: relC2x * s2 };
-
-            const C1 = { x: relC1.x + A1.x, y: relC1.y + A1.y };
-            const C2 = { x: relC2.x + A1.x, y: relC2.y + A1.y };
-
-            segments.push([C1, C2]);
-          }
-        }
-      }
-
-      // Recursively check children (holes)
-      if (B.children && B.children.length > 0) {
-        const child = mergedLength(B.children, p, minlength, tolerance);
-        totalLength += child.totalLength;
-        segments = segments.concat(child.segments);
-      }
-    }
-  }
-
-  return { totalLength: totalLength, segments: segments };
 }
 
 // Signal that worker is ready

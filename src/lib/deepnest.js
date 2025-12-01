@@ -46,8 +46,7 @@ if (typeof window !== 'undefined') {
 			mergeLines: true,
 			timeRatio: 0.5,
 			scale: 72,
-			simplify: false,
-			exploreConcave: true  // Explore concave areas of NFP for better fitting
+			simplify: false
 		};
 		
 		// list of imported files
@@ -538,10 +537,6 @@ if (typeof window !== 'undefined') {
 			
 			if(c.simplify === true || c.simplify === false){
 				config.simplify = !!c.simplify;
-			}
-			
-			if(c.exploreConcave === true || c.exploreConcave === false){
-				config.exploreConcave = !!c.exploreConcave;
 			}
 			
 			var n = Number(c.timeRatio);
