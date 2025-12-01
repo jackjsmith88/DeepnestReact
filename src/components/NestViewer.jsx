@@ -409,11 +409,18 @@ export default function NestViewer({ nests, parts, onSelectNest, config }) {
     const sheetOriginY = sheetBounds.y;
     
     // ViewBox: we want to see the sheet area (normalized to 0,0) plus padding
-    const padding = 50;
-    const viewBoxX = -padding;
-    const viewBoxY = -padding;
-    const viewBoxWidth = sheetBounds.width + padding * 2;
-    const viewBoxHeight = sheetBounds.height + padding * 2;
+    // When dimensions are shown, we need extra padding for the labels
+    const basePadding = 50;
+    const dimensionPadding = showDimensions ? (labelSize * 2 + 30) : 0;
+    const leftPadding = basePadding + dimensionPadding; // Extra space for height label on left
+    const topPadding = basePadding + dimensionPadding;  // Extra space for width label on top
+    const rightPadding = basePadding;
+    const bottomPadding = basePadding;
+    
+    const viewBoxX = -leftPadding;
+    const viewBoxY = -topPadding;
+    const viewBoxWidth = sheetBounds.width + leftPadding + rightPadding;
+    const viewBoxHeight = sheetBounds.height + topPadding + bottomPadding;
     
     svg.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`);
     
