@@ -1,32 +1,37 @@
 import { useState, useCallback, useRef } from 'react';
 import DeepNest from '../lib/deepnest.js';
 
+// Initial config - defined outside component to avoid recreation
+const initialConfig = {
+  units: 'mm',
+  scale: 72,
+  spacing: 0,
+  curveTolerance: 0.3,
+  rotations: 4,
+  threads: 4,
+  populationSize: 10,
+  mutationRate: 10,
+  placementType: 'gravity',
+  mergeLines: true,
+  timeRatio: 0.5,
+  simplify: false,
+};
+
 export function useDeepnest() {
   const [parts, setParts] = useState([]);
   const [imports, setImports] = useState([]);
-  const [config, setConfig] = useState({
-    units: 'inch',
-    scale: 72,
-    spacing: 0,
-    curveTolerance: 0.3,
-    rotations: 4,
-    threads: 4,
-    populationSize: 10,
-    mutationRate: 10,
-    placementType: 'box',
-    mergeLines: true,
-    timeRatio: 0.5,
-    simplify: false,
-  });
+  const [config, setConfig] = useState(initialConfig);
   const [isNesting, setIsNesting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [nests, setNests] = useState([]);
   
   const deepnestRef = useRef(null);
 
-  // Initialize DeepNest instance
+  // Initialize DeepNest instance and sync initial config
   if (!deepnestRef.current) {
     deepnestRef.current = new DeepNest();
+    // Apply initial config to the DeepNest instance
+    deepnestRef.current.config(initialConfig);
   }
 
   const importSVG = useCallback(async (file) => {
@@ -36,6 +41,30 @@ export function useDeepnest() {
       
       // Import the SVG
       deepnestRef.current.importsvg(filename, '', text, 1, false);
+      
+      // Auto-detect the largest shape as the sheet/bin
+      const parts = deepnestRef.current.parts;
+      if (parts.length > 0) {
+        // Check if there's already a sheet defined
+        const hasSheet = parts.some(p => p.sheet);
+        
+        if (!hasSheet) {
+          // Find the largest part by area
+          let largestIndex = 0;
+          let largestArea = 0;
+          
+          for (let i = 0; i < parts.length; i++) {
+            const area = parts[i].area || (parts[i].bounds?.width * parts[i].bounds?.height) || 0;
+            if (area > largestArea) {
+              largestArea = area;
+              largestIndex = i;
+            }
+          }
+          
+          // Mark the largest part as the sheet
+          parts[largestIndex].sheet = true;
+        }
+      }
       
       // Update parts and imports from DeepNest
       setParts([...deepnestRef.current.parts]);
@@ -71,6 +100,11 @@ export function useDeepnest() {
     setIsNesting(true);
     setProgress(0);
     setNests([]);
+    
+    // Ensure config is synced to DeepNest instance before starting
+    if (deepnestRef.current) {
+      deepnestRef.current.config(config);
+    }
     
     const progressCallback = (prog) => {
       setProgress(prog);
