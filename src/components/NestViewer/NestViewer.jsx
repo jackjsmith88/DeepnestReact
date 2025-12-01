@@ -73,6 +73,7 @@ export default function NestViewer({ nests, parts, onSelectNest, config }) {
           showDimensions={showDimensions}
           dimensionUnit={dimensionUnit}
           labelSizePercent={labelSizePercent}
+          config={config}
         />
         
         {/* Legend Panel - appears when dimensions are enabled */}
