@@ -6,6 +6,7 @@ const initialConfig = {
   units: 'mm',
   scale: 72,
   spacing: 0,
+  binPadding: 0,  // Edge margin - how far from bin edges parts must stay
   curveTolerance: 0.3,
   rotations: 4,
   threads: 4,

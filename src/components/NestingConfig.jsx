@@ -157,6 +157,34 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
                 step={config.units === 'mm' ? '1' : '0.1'}
                 style={inputStyle}
               />
+              <small style={{ color: '#666', fontSize: '11px' }}>
+                Gap between parts (blade/laser width)
+              </small>
+            </div>
+
+            <div style={fieldStyle}>
+              <label style={labelStyle}>
+                Bin Edge Padding
+                <span style={{ color: '#666', marginLeft: '4px' }}>
+                  ({config.units || 'inch'})
+                </span>
+              </label>
+              <input
+                type="number"
+                value={parseFloat(fromPixels(config.binPadding || 0, config.units || 'inch', config.scale || DEFAULT_SCALE).toFixed(2))}
+                onChange={(e) => {
+                  const userValue = parseFloat(e.target.value) || 0;
+                  const pxValue = toPixels(userValue, config.units || 'inch', config.scale || DEFAULT_SCALE);
+                  handleChange('binPadding', pxValue);
+                }}
+                disabled={disabled}
+                min="0"
+                step={config.units === 'mm' ? '1' : '0.1'}
+                style={inputStyle}
+              />
+              <small style={{ color: '#666', fontSize: '11px' }}>
+                Margin from sheet edges (for tension release cuts)
+              </small>
             </div>
 
             <div style={fieldStyle}>

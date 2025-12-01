@@ -728,6 +728,12 @@ export default function NestViewer({ nests, parts, onSelectNest, config }) {
               <strong style={{ color: '#fff' }}>Kerf:</strong> {formatDimension(config.spacing, dimensionUnit, scale)}
             </>
           )}
+          {config?.binPadding > 0 && (
+            <>
+              {' | '}
+              <strong style={{ color: '#fff' }}>Edge Padding:</strong> {formatDimension(config.binPadding, dimensionUnit, scale)}
+            </>
+          )}
         </div>
         
         {/* Dimension overlay controls */}
@@ -970,6 +976,51 @@ export default function NestViewer({ nests, parts, onSelectNest, config }) {
                 </div>
               </div>
             )}
+            
+            {/* Bin Padding Info */}
+            {config?.binPadding > 0 && (
+              <div style={{ 
+                background: '#2a2a2a', 
+                padding: '12px', 
+                borderRadius: '6px',
+                border: '1px solid #9966ff'
+              }}>
+                <div style={{ 
+                  color: '#9966ff', 
+                  fontSize: '13px', 
+                  fontWeight: 'bold',
+                  marginBottom: '4px'
+                }}>
+                  📐 Bin Edge Padding
+                </div>
+                <div style={{ color: '#ccc', fontSize: '12px' }}>
+                  {formatDimension(config.binPadding, dimensionUnit, scale)}
+                </div>
+              </div>
+            )}
+            
+            {/* Nesting Config Summary */}
+            <div style={{ 
+              background: '#2a2a2a', 
+              padding: '12px', 
+              borderRadius: '6px',
+              border: '1px solid #3a3a3a'
+            }}>
+              <div style={{ 
+                color: '#888', 
+                fontSize: '13px', 
+                fontWeight: 'bold',
+                marginBottom: '8px'
+              }}>
+                ⚙️ Config
+              </div>
+              <div style={{ color: '#999', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div>Rotations: {config?.rotations || 4}</div>
+                <div>Population: {config?.populationSize || 10}</div>
+                <div>Mutation: {config?.mutationRate || 10}%</div>
+                <div>Placement: {config?.placementType || 'gravity'}</div>
+              </div>
+            </div>
           </div>
         )}
       </div>

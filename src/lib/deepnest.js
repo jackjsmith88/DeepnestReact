@@ -37,6 +37,7 @@ if (typeof window !== 'undefined') {
 			clipperScale: 10000000,
 			curveTolerance: 0.3, 
 			spacing: 0,
+			binPadding: 0,  // Edge margin for sheets
 			rotations: 4,
 			populationSize: 10,
 			mutationRate: 10,
@@ -503,6 +504,10 @@ if (typeof window !== 'undefined') {
 			
 			if('spacing' in c){
 				config.spacing = parseFloat(c.spacing);
+			}
+			
+			if('binPadding' in c){
+				config.binPadding = parseFloat(c.binPadding);
 			}
 			
 			if(c.rotations && parseInt(c.rotations) > 0){
@@ -977,7 +982,9 @@ if (typeof window !== 'undefined') {
 			
 			for(i=0; i<parts.length; i++){
 				if(parts[i].sheet){
-					offsetTree(parts[i].polygontree, -0.5*config.spacing, this.polygonOffset.bind(this), this.simplifyPolygon.bind(this), true);
+					// Sheet gets inset by half spacing + bin padding (edge margin)
+					var sheetOffset = 0.5*config.spacing + (config.binPadding || 0);
+					offsetTree(parts[i].polygontree, -sheetOffset, this.polygonOffset.bind(this), this.simplifyPolygon.bind(this), true);
 				}
 				else{
 					offsetTree(parts[i].polygontree, 0.5*config.spacing, this.polygonOffset.bind(this), this.simplifyPolygon.bind(this));
@@ -992,7 +999,8 @@ if (typeof window !== 'undefined') {
 				}
 				
 				var offsetpaths = [simple];
-				if(offset > 0){
+				// Apply offset if non-zero (negative = inward/shrink, positive = outward/expand)
+				if(offset !== 0 && !GeometryUtil.almostEqual(offset, 0)){
 					offsetpaths = offsetFunction(simple, offset);
 				}
 				
