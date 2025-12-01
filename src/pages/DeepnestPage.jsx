@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useDeepnest } from '../hooks/useDeepnest'
 import { PartsTable } from '../components/PartsTable'
 import { FileImport } from '../components/FileImport'
-import NestViewer from '../components/NestViewer'
+import NestViewer from '../components/NestViewer/NestViewer'
 import NestingConfig from '../components/NestingConfig'
 
 export default function DeepnestPage() {
