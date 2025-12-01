@@ -44,7 +44,7 @@ import ClipperLib from './clipper.js';
 	
 	SvgParser.prototype.config = function(config){
 		this.conf.tolerance = Number(config.tolerance);
-		this.conf.endpointTolerance = Number(config.endpointTolerance);
+		this.conf.endpointTolerance = config.endpointTolerance != null ? Number(config.endpointTolerance) : 2;
 	}
 	
 	SvgParser.prototype.load = function(dirpath, svgString, scale, scalingFactor){

@@ -521,7 +521,8 @@ function drawPartDimensions(svg, partData, labelSize, unit, scale) {
   
   dimensions.forEach((dim, idx) => {
     const color = dim.priority === 1 ? '#ff6b6b' : (dim.priority === 2 ? '#ffaa00' : '#00ff88');
-    const offset = dim.offset + (idx * 3);
+    // Use the offset from the dimension (already calculated based on shape geometry)
+    const offset = dim.offset + (idx * 3 * Math.sign(dim.offset || 1));
     
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     
@@ -547,14 +548,15 @@ function drawPartDimensions(svg, partData, labelSize, unit, scale) {
     dimGroup.appendChild(line);
     
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    const textOffset = offset > 0 ? offset + 5 : offset - 5;
     
     if (dim.orientation === 'horizontal') {
       text.setAttribute('x', (dim.start.x + dim.end.x) / 2);
-      text.setAttribute('y', dim.start.y + offset - 5);
+      text.setAttribute('y', dim.start.y + textOffset);
     } else if (dim.orientation === 'vertical') {
-      text.setAttribute('x', dim.start.x + offset - 5);
+      text.setAttribute('x', dim.start.x + textOffset);
       text.setAttribute('y', (dim.start.y + dim.end.y) / 2);
-      text.setAttribute('transform', `rotate(-90, ${dim.start.x + offset - 5}, ${(dim.start.y + dim.end.y) / 2})`);
+      text.setAttribute('transform', `rotate(-90, ${dim.start.x + textOffset}, ${(dim.start.y + dim.end.y) / 2})`);
     } else {
       text.setAttribute('x', (dim.start.x + dim.end.x) / 2);
       text.setAttribute('y', (dim.start.y + dim.end.y) / 2 - 5);

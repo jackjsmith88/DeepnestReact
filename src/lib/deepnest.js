@@ -548,7 +548,7 @@ if (typeof window !== 'undefined') {
 				config.scale = parseInt(c.scale);
 			}
 
-			SvgParser.config({ tolerance: config.curveTolerance, endpointTolerance: c.endpointTolerance});
+			SvgParser.config({ tolerance: config.curveTolerance, endpointTolerance: c.endpointTolerance || 2});
 			
 			best = null;
 			//nfpCache = {};

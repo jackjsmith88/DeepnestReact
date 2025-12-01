@@ -117,34 +117,110 @@ export const analyzeShapeDimensions = (svgElements, bounds, polygonTree = null) 
   
   const dimensions = [];
   
-  // Always add bounding box dimensions
+  // Get all segments to find actual edges
+  const segments = getPolygonSegments(points);
+  const grouped = groupParallelSegments(segments);
+  
+  // Find the topmost horizontal edge (for width dimension)
+  // and the leftmost vertical edge (for height dimension)
+  let topEdge = null;
+  let leftEdge = null;
+  let bottomEdge = null;
+  let rightEdge = null;
+  
+  // Find edges at the extremes of the bounding box
+  grouped.horizontal.forEach(seg => {
+    const minY = Math.min(seg.start.y, seg.end.y);
+    const maxY = Math.max(seg.start.y, seg.end.y);
+    
+    // Top edge - at or near bounds.y
+    if (Math.abs(minY - bounds.y) < 2 || Math.abs(maxY - bounds.y) < 2) {
+      if (!topEdge || seg.length > topEdge.length) {
+        topEdge = seg;
+      }
+    }
+    // Bottom edge - at or near bounds.y + bounds.height
+    if (Math.abs(minY - (bounds.y + bounds.height)) < 2 || Math.abs(maxY - (bounds.y + bounds.height)) < 2) {
+      if (!bottomEdge || seg.length > bottomEdge.length) {
+        bottomEdge = seg;
+      }
+    }
+  });
+  
+  grouped.vertical.forEach(seg => {
+    const minX = Math.min(seg.start.x, seg.end.x);
+    const maxX = Math.max(seg.start.x, seg.end.x);
+    
+    // Left edge - at or near bounds.x
+    if (Math.abs(minX - bounds.x) < 2 || Math.abs(maxX - bounds.x) < 2) {
+      if (!leftEdge || seg.length > leftEdge.length) {
+        leftEdge = seg;
+      }
+    }
+    // Right edge - at or near bounds.x + bounds.width
+    if (Math.abs(minX - (bounds.x + bounds.width)) < 2 || Math.abs(maxX - (bounds.x + bounds.width)) < 2) {
+      if (!rightEdge || seg.length > rightEdge.length) {
+        rightEdge = seg;
+      }
+    }
+  });
+  
+  // Width dimension - place above the topmost horizontal edge, or below bottom if top is short
+  const useTopForWidth = topEdge && topEdge.length >= bounds.width * 0.8;
+  const widthEdge = useTopForWidth ? topEdge : bottomEdge;
+  const widthY = useTopForWidth ? bounds.y : bounds.y + bounds.height;
+  const widthOffset = useTopForWidth ? -25 : 25;
+  
   dimensions.push({
     type: 'width',
     label: 'Width',
     value: bounds.width,
-    start: { x: bounds.x, y: bounds.y - 20 },
-    end: { x: bounds.x + bounds.width, y: bounds.y - 20 },
+    start: { x: bounds.x, y: widthY },
+    end: { x: bounds.x + bounds.width, y: widthY },
     orientation: 'horizontal',
-    offset: -25, // Above the shape
+    offset: widthOffset,
     priority: 1
   });
+  
+  // Height dimension - place beside the longest vertical edge on the outside
+  // For L-shapes, prefer the full-height edge
+  const useLeftForHeight = leftEdge && leftEdge.length >= bounds.height * 0.8;
+  const useRightForHeight = rightEdge && rightEdge.length >= bounds.height * 0.8;
+  
+  let heightX, heightOffset;
+  if (useLeftForHeight) {
+    heightX = bounds.x;
+    heightOffset = -25;
+  } else if (useRightForHeight) {
+    heightX = bounds.x + bounds.width;
+    heightOffset = 25;
+  } else {
+    // Neither edge is full height - find longest vertical edge
+    const longestVertical = grouped.vertical.reduce((longest, seg) => 
+      (!longest || seg.length > longest.length) ? seg : longest, null);
+    
+    if (longestVertical) {
+      const isOnLeft = longestVertical.midpoint.x < bounds.x + bounds.width / 2;
+      heightX = isOnLeft ? bounds.x : bounds.x + bounds.width;
+      heightOffset = isOnLeft ? -25 : 25;
+    } else {
+      heightX = bounds.x;
+      heightOffset = -25;
+    }
+  }
   
   dimensions.push({
     type: 'height',
     label: 'Height',
     value: bounds.height,
-    start: { x: bounds.x - 20, y: bounds.y },
-    end: { x: bounds.x - 20, y: bounds.y + bounds.height },
+    start: { x: heightX, y: bounds.y },
+    end: { x: heightX, y: bounds.y + bounds.height },
     orientation: 'vertical',
-    offset: -25, // Left of the shape
+    offset: heightOffset,
     priority: 1
   });
   
   if (points.length < 3) return dimensions;
-  
-  // Get all segments
-  const segments = getPolygonSegments(points);
-  const grouped = groupParallelSegments(segments);
   
   // Detect complex shapes by counting unique horizontal/vertical positions
   const horizontalYs = [...new Set(grouped.horizontal.map(s => Math.round(s.midpoint.y)))];
