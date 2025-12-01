@@ -6924,8 +6924,10 @@
     }
     return expolygons;
   };
-})(typeof window !== 'undefined' ? window : this);
+})(typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : this));
 
 // ES6 export for modern module systems
-const ClipperLib = (typeof window !== 'undefined' && window.ClipperLib) || {};
-export default ClipperLib;
+const ClipperLibExport = (typeof window !== 'undefined' && window.ClipperLib) || 
+                         (typeof self !== 'undefined' && self.ClipperLib) || 
+                         {};
+export default ClipperLibExport;

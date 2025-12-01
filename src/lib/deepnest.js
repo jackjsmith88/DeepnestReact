@@ -965,11 +965,13 @@ if (typeof window !== 'undefined') {
 			progressCallback = p;
 			displayCallback = d;
 			
-			var parts = [];
-			
-			/*while(this.nests.length > 0){
+			// Reset state for fresh start
+			GA = null;
+			while(this.nests.length > 0){
 				this.nests.pop();
-			}*/
+			}
+			
+			var parts = [];
 			
 			// send only bare essentials through ipc
 			for(var i=0; i<this.parts.length; i++){
@@ -1181,7 +1183,10 @@ if (typeof window !== 'undefined') {
 			// Use Web Worker instead of Electron IPC
 			if (typeof Worker !== 'undefined') {
 				try {
-					const worker = new Worker('/nesting-worker.js');
+					const worker = new Worker(
+						new URL('../workers/nesting-worker.js', import.meta.url),
+						{ type: 'module' }
+					);
 					
 					worker.onmessage = (event) => {
 						const { type, payload, error } = event.data;

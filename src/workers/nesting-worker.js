@@ -1,8 +1,8 @@
 // Web Worker for background nesting calculations
 // This replaces the Electron IPC background worker with NFP-based placement
 
-// Import ClipperLib for Minkowski sum calculations
-importScripts('./clipper.js');
+// Import ClipperLib as ES module
+import ClipperLib from '../lib/clipper.js';
 
 // Configuration
 const config = {
