@@ -308,6 +308,24 @@ export default function NestingConfig({ config, onConfigChange, disabled }) {
               }}>
                 <input
                   type="checkbox"
+                  checked={config.exploreConcave !== false}
+                  onChange={(e) => handleChange('exploreConcave', e.target.checked)}
+                  disabled={disabled}
+                  style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
+                />
+                Explore concave areas
+              </label>
+
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                color: '#ccc',
+                fontSize: '13px'
+              }}>
+                <input
+                  type="checkbox"
                   checked={config.simplify === true}
                   onChange={(e) => handleChange('simplify', e.target.checked)}
                   disabled={disabled}
