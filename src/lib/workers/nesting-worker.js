@@ -2,7 +2,7 @@
 // This replaces the Electron IPC background worker with NFP-based placement
 
 // Import ClipperLib as ES module
-import ClipperLib from '../lib/clipper.js';
+import ClipperLib from '../clipper.js';
 
 // Configuration
 const config = {

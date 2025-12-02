@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import DeepNest from '../lib/deepnest.js';
+import DeepNest from '../deepnest.js';
 
 // Initial config - defined outside component to avoid recreation
 const initialConfig = {

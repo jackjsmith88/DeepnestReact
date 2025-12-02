@@ -1184,7 +1184,7 @@ if (typeof window !== 'undefined') {
 			if (typeof Worker !== 'undefined') {
 				try {
 					const worker = new Worker(
-						new URL('../workers/nesting-worker.js', import.meta.url),
+						new URL('./workers/nesting-worker.js', import.meta.url),
 						{ type: 'module' }
 					);
 					
